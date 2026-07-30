@@ -43,6 +43,31 @@
         p {
             font-size: 20px;
             color: #aab2bd;
+            margin-bottom: 30px;
+        }
+
+        /* Download button */
+        .download-button {
+            display: inline-block;
+            padding: 15px 32px;
+            background: #238636;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .download-button:hover {
+            background: #2ea043;
+            transform: translateY(-2px);
+        }
+
+        .download-info {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #8b949e;
         }
     </style>
 </head>
@@ -59,6 +84,17 @@
             Our website is currently under development.<br>
             We'll be launching soon.
         </p>
+
+        <!-- REPLACE THE URL BELOW WITH YOUR APP.EXE RELEASE URL -->
+
+        <a href="PASTE-YOUR-APP-EXE-DOWNLOAD-LINK-HERE"
+           class="download-button">
+            Download App
+        </a>
+
+        <div class="download-info">
+            Windows • app.exe
+        </div>
 
     </div>
 
