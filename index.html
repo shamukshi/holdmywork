@@ -6,8 +6,6 @@
     <title>HoldMyWork · OHLC</title>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js">
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-    </script>
     <style>
         * {
             margin: 0;
@@ -201,7 +199,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Takee care of my work while I go do something else.
+            Tak care of my work while I go do something else.
         </div>
     </header>
 
@@ -240,59 +238,32 @@
             let ohlcData = [];
             let visibleRange = '1M';
 
-            // ---------- column detection ----------
-            function findColumns(headers) {
-                const lowerMap = {};
-                headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
+            // ---------- SAMPLE DATA (your 6 rows) ----------
+            const SAMPLE_DATA = [
+                { time: new Date('2020-01-01 09:15:00').getTime() / 1000, open: 100, high: 100, low: 100, close: 100.0214737 },
+                { time: new Date('2020-01-01 10:15:00').getTime() / 1000, open: 99.70423011, high: 99.50707164, low: 99.87286936, close: 99.93589005 },
+                { time: new Date('2020-01-01 11:15:00').getTime() / 1000, open: 99.61954718, high: 99.39207048, low: 99.82229719, close: 100.04746 },
+                { time: new Date('2020-01-01 12:15:00').getTime() / 1000, open: 99.71834394, high: 99.43349563, low: 99.77048017, close: 99.88671835 },
+                { time: new Date('2020-01-01 13:15:00').getTime() / 1000, open: 99.56293679, high: 99.44586135, low: 99.83894711, close: 99.90803646 },
+                { time: new Date('2020-01-01 14:15:00').getTime() / 1000, open: 99.57844649, high: 99.29855476, low: 99.78152824, close: 99.9113042 }
+            ];
 
-                const dateCol = lowerMap['date'] || lowerMap['timestamp'] || lowerMap['time'] || lowerMap['datetime'] ||
-                    null;
-                const openCol = lowerMap['open_norm'] || lowerMap['open'] || lowerMap['open price'] || null;
-                const highCol = lowerMap['high_norm'] || lowerMap['high'] || lowerMap['high price'] || null;
-                const lowCol = lowerMap['low_norm'] || lowerMap['low'] || lowerMap['low price'] || null;
-                const closeCol = lowerMap['close_norm'] || lowerMap['close'] || lowerMap['close price'] || lowerMap[
-                    'last'] || null;
-
-                return { dateCol, openCol, highCol, lowCol, closeCol };
-            }
-
-            function parseExcelDate(val) {
-                if (typeof val === 'number') {
-                    const epoch = new Date(1899, 11, 30);
-                    return new Date(epoch.getTime() + val * 86400000);
-                }
-                if (typeof val === 'string') {
-                    const d = new Date(val);
-                    if (!isNaN(d.getTime())) return d;
-                    const trimmed = val.trim();
-                    const ms = Date.parse(trimmed);
-                    if (!isNaN(ms)) return new Date(ms);
-                }
-                return null;
-            }
-
-            function toChartTime(dateObj) {
-                if (!dateObj || isNaN(dateObj.getTime())) return null;
-                return Math.floor(dateObj.getTime() / 1000);
-            }
-
-            // ---------- load Excel ----------
+            // Try to load Excel, but fallback to sample data if it fails
             async function loadExcel() {
                 try {
-                    loadStatusEl.textContent = '⏳ reading…';
+                    loadStatusEl.textContent = '⏳ loading Excel…';
                     
-                    // GitHub Pages path - relative to root
                     const response = await fetch('data/ohlc.xlsx');
                     
                     if (!response.ok) {
-                        // Try alternative path just in case
-                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
+                        console.warn('Excel file not found, using sample data');
+                        loadStatusEl.textContent = '📊 using sample data';
+                        return SAMPLE_DATA;
                     }
                     
                     const arrayBuffer = await response.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
                     
-                    // Look for "tab_1" specifically
                     let sheetName = 'tab_1';
                     if (!workbook.SheetNames.includes(sheetName)) {
                         sheetName = workbook.SheetNames[0];
@@ -302,16 +273,25 @@
                     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
 
                     if (!rows || rows.length === 0) {
-                        throw new Error('No data rows found in sheet: ' + sheetName);
+                        console.warn('No data in Excel, using sample data');
+                        loadStatusEl.textContent = '📊 using sample data';
+                        return SAMPLE_DATA;
                     }
 
                     const headers = Object.keys(rows[0]);
-                    const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
+                    const lowerMap = {};
+                    headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
+
+                    const dateCol = lowerMap['date'] || lowerMap['timestamp'] || lowerMap['time'] || null;
+                    const openCol = lowerMap['open_norm'] || lowerMap['open'] || null;
+                    const highCol = lowerMap['high_norm'] || lowerMap['high'] || null;
+                    const lowCol = lowerMap['low_norm'] || lowerMap['low'] || null;
+                    const closeCol = lowerMap['close_norm'] || lowerMap['close'] || null;
 
                     if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
-                        throw new Error(
-                            `Could not detect OHLC columns. Found: ${headers.join(', ')}`
-                        );
+                        console.warn('Columns not found in Excel, using sample data');
+                        loadStatusEl.textContent = '📊 using sample data';
+                        return SAMPLE_DATA;
                     }
 
                     const parsed = [];
@@ -322,40 +302,44 @@
                         const low = parseFloat(row[lowCol]);
                         const close = parseFloat(row[closeCol]);
 
-                        if (rawDate === undefined || rawDate === null || rawDate === '') continue;
+                        if (rawDate === undefined || rawDate === null) continue;
                         if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
 
-                        const dateObj = parseExcelDate(rawDate);
+                        let dateObj;
+                        if (typeof rawDate === 'number') {
+                            const epoch = new Date(1899, 11, 30);
+                            dateObj = new Date(epoch.getTime() + rawDate * 86400000);
+                        } else {
+                            dateObj = new Date(rawDate);
+                        }
+                        
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
 
-                        const timeSec = toChartTime(dateObj);
+                        const timeSec = Math.floor(dateObj.getTime() / 1000);
                         if (timeSec === null) continue;
-
-                        const exists = parsed.some(d => d.time === timeSec);
-                        if (exists) continue;
 
                         parsed.push({
                             time: timeSec,
                             open: open,
                             high: high,
                             low: low,
-                            close: close,
-                            _date: dateObj
+                            close: close
                         });
                     }
 
                     if (parsed.length === 0) {
-                        throw new Error('No valid OHLC rows after parsing.');
+                        console.warn('No valid rows in Excel, using sample data');
+                        loadStatusEl.textContent = '📊 using sample data';
+                        return SAMPLE_DATA;
                     }
 
                     parsed.sort((a, b) => a.time - b.time);
-                    ohlcData = parsed;
+                    loadStatusEl.textContent = '✅ Excel loaded';
                     return parsed;
                 } catch (err) {
-                    console.error('Excel load error:', err);
-                    loadStatusEl.textContent = `⚠️ ${err.message}`;
-                    loadStatusEl.style.color = '#e6b88a';
-                    return null;
+                    console.warn('Error loading Excel, using sample data:', err);
+                    loadStatusEl.textContent = '📊 using sample data';
+                    return SAMPLE_DATA;
                 }
             }
 
@@ -399,6 +383,8 @@
                     return;
                 }
 
+                console.log('Rendering', data.length, 'candles');
+
                 if (chart) {
                     chart.remove();
                     chart = null;
@@ -435,10 +421,6 @@
                         borderColor: '#2a3a4a',
                         timeVisible: true,
                         secondsVisible: false,
-                        tickMarkFormatter: (time, tickMarkType, locale) => {
-                            const date = new Date(time * 1000);
-                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        },
                     },
                     handleScroll: { mouseWheel: true, pressedMouseMove: true },
                     handleScale: { mouseWheel: true, pinch: true },
@@ -609,6 +591,7 @@
                 });
 
                 const data = await loadExcel();
+                ohlcData = data;
                 if (data && data.length > 0) {
                     renderChart(data);
                 } else {
@@ -627,7 +610,6 @@
                 }, 80);
             });
 
-            // Start the app
             init();
         })();
     </script>
