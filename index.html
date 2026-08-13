@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>HoldMyWork · OHLC</title>
-    <!-- Lightweight Charts + SheetJS -->
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
@@ -160,21 +159,6 @@
             background: #0d131b;
         }
 
-        .status-msg {
-            color: #e6b88a;
-            background: #241e1a;
-            border: 1px solid #4d3e30;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            display: inline-block;
-            margin-top: 4px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
         @media (max-width: 700px) {
             body {
                 padding: 10px 12px 12px 12px;
@@ -256,7 +240,7 @@
             let ohlcData = [];
             let visibleRange = '1M';
 
-            // ---------- column detection (flexible) ----------
+            // ---------- column detection ----------
             function findColumns(headers) {
                 const lowerMap = {};
                 headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
@@ -296,36 +280,32 @@
             async function loadExcel() {
                 try {
                     loadStatusEl.textContent = '⏳ reading…';
-                    console.log('Loading Excel file...');
                     
+                    // GitHub Pages path - relative to root
                     const response = await fetch('data/ohlc.xlsx');
-                    console.log('Response status:', response.status);
                     
-                    if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+                    if (!response.ok) {
+                        // Try alternative path just in case
+                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
+                    }
                     
                     const arrayBuffer = await response.arrayBuffer();
-                    console.log('File loaded, size:', arrayBuffer.byteLength, 'bytes');
-                    
                     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
-                    console.log('Sheets found:', workbook.SheetNames);
                     
-                    // Look for "tab_1" specifically, or fallback to first sheet
+                    // Look for "tab_1" specifically
                     let sheetName = 'tab_1';
                     if (!workbook.SheetNames.includes(sheetName)) {
-                        console.warn(`Sheet "tab_1" not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
                         sheetName = workbook.SheetNames[0];
-                        console.log(`Using fallback sheet: "${sheetName}"`);
                     }
                     
                     const firstSheet = workbook.Sheets[sheetName];
                     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
-                    console.log('Rows parsed:', rows.length);
 
-                    if (!rows || rows.length === 0) throw new Error('No data rows found in sheet: ' + sheetName);
+                    if (!rows || rows.length === 0) {
+                        throw new Error('No data rows found in sheet: ' + sheetName);
+                    }
 
                     const headers = Object.keys(rows[0]);
-                    console.log('Headers found:', headers);
-                    
                     const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
 
                     if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
@@ -333,8 +313,6 @@
                             `Could not detect OHLC columns. Found: ${headers.join(', ')}`
                         );
                     }
-                    
-                    console.log(`Using columns: date="${dateCol}", open="${openCol}", high="${highCol}", low="${lowCol}", close="${closeCol}"`);
 
                     const parsed = [];
                     for (const row of rows) {
@@ -353,7 +331,6 @@
                         const timeSec = toChartTime(dateObj);
                         if (timeSec === null) continue;
 
-                        // avoid duplicates
                         const exists = parsed.some(d => d.time === timeSec);
                         if (exists) continue;
 
@@ -367,9 +344,9 @@
                         });
                     }
 
-                    console.log('Valid candles parsed:', parsed.length);
-
-                    if (parsed.length === 0) throw new Error('No valid OHLC rows after parsing.');
+                    if (parsed.length === 0) {
+                        throw new Error('No valid OHLC rows after parsing.');
+                    }
 
                     parsed.sort((a, b) => a.time - b.time);
                     ohlcData = parsed;
@@ -382,7 +359,7 @@
                 }
             }
 
-            // ---------- aggregation helpers ----------
+            // ---------- aggregation ----------
             function roundToInterval(timeSec, intervalSeconds) {
                 return Math.floor(timeSec / intervalSeconds) * intervalSeconds;
             }
@@ -401,15 +378,12 @@
                             high: d.high,
                             low: d.low,
                             close: d.close,
-                            count: 1,
-                            lastClose: d.close
                         });
                     } else {
                         const b = buckets.get(bucketKey);
                         b.high = Math.max(b.high, d.high);
                         b.low = Math.min(b.low, d.low);
                         b.close = d.close;
-                        b.count += 1;
                     }
                 }
 
@@ -495,8 +469,6 @@
                     const first = new Date(data[0].time * 1000);
                     const last = new Date(data[data.length - 1].time * 1000);
                     dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
-                } else {
-                    dateRangeEl.textContent = '—';
                 }
 
                 applyRange(visibleRange);
@@ -516,7 +488,7 @@
                 return date.toISOString().slice(0, 10);
             }
 
-            // ---------- range + aggregation logic ----------
+            // ---------- range ----------
             function getAggregationInterval(rangeKey, data) {
                 if (!data || data.length < 2) return 0;
                 const first = data[0];
@@ -655,6 +627,7 @@
                 }, 80);
             });
 
+            // Start the app
             init();
         })();
     </script>
