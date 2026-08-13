@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>HoldMyWork · OHLC</title>
-    <!-- Updated Lightweight Charts CDN - using a specific working version -->
+    <!-- Lightweight Charts CDN -->
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
@@ -164,7 +164,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Takeee care of my work while I go do something else.
+            Taaake care of my work while I go do something else.
         </div>
     </header>
 
@@ -376,13 +376,14 @@
 
                 console.log('Chart created successfully');
 
+                // Traditional red and green candle colors
                 candlestickSeries = chart.addCandlestickSeries({
-                    upColor: '#4caf84',
-                    downColor: '#e2636b',
-                    borderDownColor: '#c84c54',
-                    borderUpColor: '#3e9b77',
-                    wickUpColor: '#6abf9a',
-                    wickDownColor: '#d97a82',
+                    upColor: '#26a69a',        // Green for up candles
+                    downColor: '#ef5350',      // Red for down candles
+                    borderUpColor: '#26a69a',  // Green border
+                    borderDownColor: '#ef5350',// Red border
+                    wickUpColor: '#26a69a',    // Green wick
+                    wickDownColor: '#ef5350',  // Red wick
                 });
 
                 const chartData = data.map(d => ({
