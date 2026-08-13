@@ -296,16 +296,36 @@
             async function loadExcel() {
                 try {
                     loadStatusEl.textContent = '⏳ reading…';
+                    console.log('Loading Excel file...');
+                    
                     const response = await fetch('data/ohlc.xlsx');
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+                    
                     const arrayBuffer = await response.arrayBuffer();
+                    console.log('File loaded, size:', arrayBuffer.byteLength, 'bytes');
+                    
                     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    console.log('Sheets found:', workbook.SheetNames);
+                    
+                    // Look for "tab_1" specifically, or fallback to first sheet
+                    let sheetName = 'tab_1';
+                    if (!workbook.SheetNames.includes(sheetName)) {
+                        console.warn(`Sheet "tab_1" not found. Available sheets: ${workbook.SheetNames.join(', ')}`);
+                        sheetName = workbook.SheetNames[0];
+                        console.log(`Using fallback sheet: "${sheetName}"`);
+                    }
+                    
+                    const firstSheet = workbook.Sheets[sheetName];
                     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
+                    console.log('Rows parsed:', rows.length);
 
-                    if (!rows || rows.length === 0) throw new Error('No data rows found.');
+                    if (!rows || rows.length === 0) throw new Error('No data rows found in sheet: ' + sheetName);
 
                     const headers = Object.keys(rows[0]);
+                    console.log('Headers found:', headers);
+                    
                     const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
 
                     if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
@@ -313,6 +333,8 @@
                             `Could not detect OHLC columns. Found: ${headers.join(', ')}`
                         );
                     }
+                    
+                    console.log(`Using columns: date="${dateCol}", open="${openCol}", high="${highCol}", low="${lowCol}", close="${closeCol}"`);
 
                     const parsed = [];
                     for (const row of rows) {
@@ -345,6 +367,8 @@
                         });
                     }
 
+                    console.log('Valid candles parsed:', parsed.length);
+
                     if (parsed.length === 0) throw new Error('No valid OHLC rows after parsing.');
 
                     parsed.sort((a, b) => a.time - b.time);
@@ -352,7 +376,7 @@
                     return parsed;
                 } catch (err) {
                     console.error('Excel load error:', err);
-                    loadStatusEl.textContent = '⚠️ error loading data';
+                    loadStatusEl.textContent = `⚠️ ${err.message}`;
                     loadStatusEl.style.color = '#e6b88a';
                     return null;
                 }
@@ -360,7 +384,6 @@
 
             // ---------- aggregation helpers ----------
             function roundToInterval(timeSec, intervalSeconds) {
-                // returns the start of the interval for the given timestamp
                 return Math.floor(timeSec / intervalSeconds) * intervalSeconds;
             }
 
@@ -385,13 +408,12 @@
                         const b = buckets.get(bucketKey);
                         b.high = Math.max(b.high, d.high);
                         b.low = Math.min(b.low, d.low);
-                        b.close = d.close; // last close in bucket
+                        b.close = d.close;
                         b.count += 1;
                     }
                 }
 
                 const result = Array.from(buckets.values());
-                // sort by time
                 result.sort((a, b) => a.time - b.time);
                 return result;
             }
@@ -477,10 +499,8 @@
                     dateRangeEl.textContent = '—';
                 }
 
-                // apply current range
                 applyRange(visibleRange);
 
-                // resize observer
                 const resizeObserver = new ResizeObserver(() => {
                     if (chart) {
                         chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
@@ -499,7 +519,6 @@
             // ---------- range + aggregation logic ----------
             function getAggregationInterval(rangeKey, data) {
                 if (!data || data.length < 2) return 0;
-                // raw interval in seconds (assume 15min from sample)
                 const first = data[0];
                 const second = data[1] || data[0];
                 const rawInterval = Math.abs(second.time - first.time);
@@ -507,17 +526,17 @@
 
                 switch (rangeKey) {
                     case '1D':
-                        return rawInterval; // keep as-is (15min)
+                        return rawInterval;
                     case '1W':
-                        return Math.max(rawInterval, 3600); // 1h
+                        return Math.max(rawInterval, 3600);
                     case '1M':
-                        return Math.max(rawInterval, 3600 * 4); // 4h
+                        return Math.max(rawInterval, 3600 * 4);
                     case '3M':
-                        return Math.max(rawInterval, 3600 * 8); // 8h
+                        return Math.max(rawInterval, 3600 * 8);
                     case '1Y':
-                        return Math.max(rawInterval, 86400); // 1d
+                        return Math.max(rawInterval, 86400);
                     case 'ALL':
-                        return Math.max(rawInterval, 86400 * 2); // 2d
+                        return Math.max(rawInterval, 86400 * 2);
                     default:
                         return 0;
                 }
@@ -534,7 +553,6 @@
                     displayData = aggregateCandles(rawData, interval);
                 }
 
-                // update series with aggregated data
                 if (candlestickSeries) {
                     const chartData = displayData.map(d => ({
                         time: d.time,
@@ -552,7 +570,6 @@
                     }
                 }
 
-                // set visible range
                 const last = displayData[displayData.length - 1];
                 const first = displayData[0];
                 const lastTime = last.time;
