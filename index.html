@@ -1,570 +1,645 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>HoldMyWork · OHLC</title>
-  <!-- Lightweight Charts (CDN) + SheetJS -->
-  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>HoldMyWork · OHLC</title>
+    <!-- Lightweight Charts + SheetJS -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      background: #0b0f14;
-      color: #d1d9e6;
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 16px 20px 20px 20px;
-      overflow: hidden;
-    }
+        body {
+            background: #0b0f14;
+            color: #d1d9e6;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 16px 20px 20px 20px;
+            overflow: hidden;
+        }
 
-    /* header — holdmywork branding */
-    .app-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 6px 16px;
-      margin-bottom: 12px;
-      flex-shrink: 0;
-    }
+        .app-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px 16px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
 
-    .brand {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-    }
+        .brand {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
 
-    .brand h1 {
-      font-weight: 500;
-      font-size: 1.6rem;
-      letter-spacing: -0.02em;
-      color: #eef3fa;
-      background: linear-gradient(145deg, #eef3fa 0%, #b0c8e0 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+        .brand h1 {
+            font-weight: 500;
+            font-size: 1.6rem;
+            letter-spacing: -0.02em;
+            color: #eef3fa;
+            background: linear-gradient(145deg, #eef3fa 0%, #b0c8e0 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-    .brand small {
-      font-size: 0.9rem;
-      font-weight: 300;
-      color: #8b9bb5;
-      margin-left: 4px;
-      letter-spacing: 0.2px;
-      -webkit-text-fill-color: #8b9bb5;
-    }
+        .brand small {
+            font-size: 0.9rem;
+            font-weight: 300;
+            color: #8b9bb5;
+            margin-left: 4px;
+            letter-spacing: 0.2px;
+            -webkit-text-fill-color: #8b9bb5;
+        }
 
-    .sub-message {
-      font-size: 0.95rem;
-      color: #a2b7d0;
-      background: rgba(255, 255, 255, 0.03);
-      padding: 4px 14px;
-      border-radius: 40px;
-      border: 1px solid #2a3440;
-      backdrop-filter: blur(2px);
-      white-space: nowrap;
-    }
+        .sub-message {
+            font-size: 0.95rem;
+            color: #a2b7d0;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px 14px;
+            border-radius: 40px;
+            border: 1px solid #2a3440;
+            backdrop-filter: blur(2px);
+            white-space: nowrap;
+        }
 
-    /* controls row */
-    .chart-controls {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px 12px;
-      margin-bottom: 12px;
-      flex-shrink: 0;
-    }
+        .chart-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
 
-    .time-buttons {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-    }
+        .time-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
 
-    .time-buttons button {
-      background: transparent;
-      border: 1px solid #2d3a48;
-      color: #b6c9e0;
-      font-size: 0.7rem;
-      font-weight: 500;
-      padding: 4px 12px;
-      border-radius: 30px;
-      cursor: pointer;
-      transition: 0.2s;
-      letter-spacing: 0.3px;
-      background: #141c26;
-    }
+        .time-buttons button {
+            background: transparent;
+            border: 1px solid #2d3a48;
+            color: #b6c9e0;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+            letter-spacing: 0.3px;
+            background: #141c26;
+        }
 
-    .time-buttons button:hover {
-      background: #25313f;
-      border-color: #5b748f;
-      color: #f0f7ff;
-    }
+        .time-buttons button:hover {
+            background: #25313f;
+            border-color: #5b748f;
+            color: #f0f7ff;
+        }
 
-    .time-buttons button.active {
-      background: #2b3d52;
-      border-color: #6b8bb0;
-      color: #ffffff;
-      box-shadow: 0 0 6px rgba(70, 130, 200, 0.2);
-    }
+        .time-buttons button.active {
+            background: #2b3d52;
+            border-color: #6b8bb0;
+            color: #ffffff;
+            box-shadow: 0 0 6px rgba(70, 130, 200, 0.2);
+        }
 
-    .info-badge {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px 18px;
-      margin-left: auto;
-      font-size: 0.75rem;
-      color: #8499b3;
-      background: #121b24;
-      padding: 4px 16px 4px 14px;
-      border-radius: 40px;
-      border: 1px solid #25323f;
-    }
+        .info-badge {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 18px;
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: #8499b3;
+            background: #121b24;
+            padding: 4px 16px 4px 14px;
+            border-radius: 40px;
+            border: 1px solid #25323f;
+        }
 
-    .info-badge span {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
+        .info-badge span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
 
-    .info-badge .num {
-      color: #d6e5f8;
-      font-weight: 500;
-    }
+        .info-badge .num {
+            color: #d6e5f8;
+            font-weight: 500;
+        }
 
-    /* chart container */
-    .chart-wrapper {
-      flex: 1 1 auto;
-      min-height: 0;
-      background: #0d131b;
-      border-radius: 20px;
-      border: 1px solid #202b36;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-      padding: 8px;
-      position: relative;
-      transition: all 0.1s;
-    }
+        .chart-wrapper {
+            flex: 1 1 auto;
+            min-height: 0;
+            background: #0d131b;
+            border-radius: 20px;
+            border: 1px solid #202b36;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            padding: 8px;
+            position: relative;
+            transition: all 0.1s;
+        }
 
-    #chart-container {
-      width: 100%;
-      height: 100%;
-      border-radius: 14px;
-      background: #0d131b;
-    }
+        #chart-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 14px;
+            background: #0d131b;
+        }
 
-    /* error / status */
-    .status-msg {
-      color: #e6b88a;
-      background: #241e1a;
-      border: 1px solid #4d3e30;
-      padding: 8px 16px;
-      border-radius: 30px;
-      font-size: 0.8rem;
-      display: inline-block;
-      margin-top: 4px;
-    }
+        .status-msg {
+            color: #e6b88a;
+            background: #241e1a;
+            border: 1px solid #4d3e30;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-top: 4px;
+        }
 
-    .hidden {
-      display: none !important;
-    }
+        .hidden {
+            display: none !important;
+        }
 
-    /* responsive */
-    @media (max-width: 700px) {
-      body { padding: 10px 12px 12px 12px; }
-      .brand h1 { font-size: 1.4rem; }
-      .sub-message { font-size: 0.75rem; padding: 2px 10px; }
-      .info-badge { font-size: 0.65rem; padding: 2px 10px; }
-      .time-buttons button { font-size: 0.6rem; padding: 2px 10px; }
-    }
+        @media (max-width: 700px) {
+            body {
+                padding: 10px 12px 12px 12px;
+            }
+            .brand h1 {
+                font-size: 1.4rem;
+            }
+            .sub-message {
+                font-size: 0.75rem;
+                padding: 2px 10px;
+            }
+            .info-badge {
+                font-size: 0.65rem;
+                padding: 2px 10px;
+            }
+            .time-buttons button {
+                font-size: 0.6rem;
+                padding: 2px 10px;
+            }
+        }
 
-    /* custom scroll for chart (if any) */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-    ::-webkit-scrollbar-track { background: #1e2833; }
-    ::-webkit-scrollbar-thumb { background: #3a5068; border-radius: 12px; }
-  </style>
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e2833;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a5068;
+            border-radius: 12px;
+        }
+    </style>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header class="app-header">
-    <div class="brand">
-      <h1>holdmywork</h1>
-      <small>⚡</small>
+    <header class="app-header">
+        <div class="brand">
+            <h1>holdmywork</h1>
+            <small>⚡</small>
+        </div>
+        <div class="sub-message">
+            Take care of my work while I go do something else.
+        </div>
+    </header>
+
+    <div class="chart-controls">
+        <div class="time-buttons" id="timeButtons">
+            <button data-range="1D">1D</button>
+            <button data-range="1W">1W</button>
+            <button data-range="1M" class="active">1M</button>
+            <button data-range="3M">3M</button>
+            <button data-range="1Y">1Y</button>
+            <button data-range="ALL">All</button>
+        </div>
+        <div class="info-badge" id="infoBadge">
+            <span>📄 <span class="num" id="candleCount">—</span> candles</span>
+            <span>📅 <span id="dateRange">—</span></span>
+            <span id="loadStatus" style="color:#8fb0d0;">⏳ loading…</span>
+        </div>
     </div>
-    <div class="sub-message">
-      Take care of my work while I go do something else.
+
+    <div class="chart-wrapper">
+        <div id="chart-container"></div>
     </div>
-  </header>
 
-  <!-- CONTROLS + INFO -->
-  <div class="chart-controls">
-    <div class="time-buttons">
-      <button data-range="1D">1D</button>
-      <button data-range="1W">1W</button>
-      <button data-range="1M" class="active">1M</button>
-      <button data-range="3M">3M</button>
-      <button data-range="1Y">1Y</button>
-      <button data-range="ALL">All</button>
-    </div>
-    <div class="info-badge" id="infoBadge">
-      <span>📄 <span class="num" id="candleCount">—</span> candles</span>
-      <span>📅 <span id="dateRange">—</span></span>
-      <span id="loadStatus" style="color:#8fb0d0;">⏳ loading…</span>
-    </div>
-  </div>
+    <script>
+        (function() {
+            "use strict";
 
-  <!-- CHART -->
-  <div class="chart-wrapper">
-    <div id="chart-container"></div>
-  </div>
+            const container = document.getElementById('chart-container');
+            const candleCountEl = document.getElementById('candleCount');
+            const dateRangeEl = document.getElementById('dateRange');
+            const loadStatusEl = document.getElementById('loadStatus');
+            const timeButtons = document.querySelectorAll('#timeButtons button');
 
-  <script>
-    (function() {
-      "use strict";
+            let chart = null;
+            let candlestickSeries = null;
+            let ohlcData = [];
+            let visibleRange = '1M';
 
-      // ---------- DOM refs ----------
-      const container = document.getElementById('chart-container');
-      const candleCountEl = document.getElementById('candleCount');
-      const dateRangeEl = document.getElementById('dateRange');
-      const loadStatusEl = document.getElementById('loadStatus');
-      const timeButtons = document.querySelectorAll('.time-buttons button');
+            // ---------- column detection (flexible) ----------
+            function findColumns(headers) {
+                const lowerMap = {};
+                headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
 
-      // ---------- chart instance ----------
-      let chart = null;
-      let candlestickSeries = null;
-      let ohlcData = [];            // raw parsed data [{ time, open, high, low, close }]
-      let visibleRange = '1M';      // default
+                const dateCol = lowerMap['date'] || lowerMap['timestamp'] || lowerMap['time'] || lowerMap['datetime'] ||
+                    null;
+                const openCol = lowerMap['open_norm'] || lowerMap['open'] || lowerMap['open price'] || null;
+                const highCol = lowerMap['high_norm'] || lowerMap['high'] || lowerMap['high price'] || null;
+                const lowCol = lowerMap['low_norm'] || lowerMap['low'] || lowerMap['low price'] || null;
+                const closeCol = lowerMap['close_norm'] || lowerMap['close'] || lowerMap['close price'] || lowerMap[
+                    'last'] || null;
 
-      // ---------- helpers ----------
-      function parseExcelDate(val) {
-        // Excel serial date (number) or string
-        if (typeof val === 'number') {
-          // Excel serial: days since 1899-12-30
-          const epoch = new Date(1899, 11, 30);
-          const d = new Date(epoch.getTime() + val * 86400000);
-          return d;
-        }
-        if (typeof val === 'string') {
-          const d = new Date(val);
-          if (!isNaN(d.getTime())) return d;
-          // try parse "YYYY-MM-DD HH:MM:SS" etc.
-          const trimmed = val.trim();
-          const ms = Date.parse(trimmed);
-          if (!isNaN(ms)) return new Date(ms);
-        }
-        return null;
-      }
-
-      // convert Date to lightweight-charts time (UTC timestamp in seconds)
-      function toChartTime(dateObj) {
-        if (!dateObj || isNaN(dateObj.getTime())) return null;
-        return Math.floor(dateObj.getTime() / 1000);
-      }
-
-      // ---------- load & parse Excel ----------
-      async function loadExcel() {
-        try {
-          loadStatusEl.textContent = '⏳ reading…';
-          const response = await fetch('data/ohlc.xlsx');
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const arrayBuffer = await response.arrayBuffer();
-          const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
-
-          if (!rows || rows.length === 0) {
-            throw new Error('No data rows found in Excel.');
-          }
-
-          // detect columns (case-insensitive)
-          const headers = Object.keys(rows[0]);
-          const findCol = (possibleNames) => {
-            for (const name of possibleNames) {
-              const found = headers.find(h => h.trim().toLowerCase() === name.toLowerCase());
-              if (found) return found;
+                return { dateCol, openCol, highCol, lowCol, closeCol };
             }
-            return null;
-          };
 
-          const dateCol = findCol(['timestamp', 'date', 'time', 'datetime']);
-          const openCol = findCol(['open', 'open price']);
-          const highCol = findCol(['high', 'high price']);
-          const lowCol = findCol(['low', 'low price']);
-          const closeCol = findCol(['close', 'close price', 'last']);
+            function parseExcelDate(val) {
+                if (typeof val === 'number') {
+                    const epoch = new Date(1899, 11, 30);
+                    return new Date(epoch.getTime() + val * 86400000);
+                }
+                if (typeof val === 'string') {
+                    const d = new Date(val);
+                    if (!isNaN(d.getTime())) return d;
+                    const trimmed = val.trim();
+                    const ms = Date.parse(trimmed);
+                    if (!isNaN(ms)) return new Date(ms);
+                }
+                return null;
+            }
 
-          if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
-            throw new Error(`Could not find required OHLC columns. Found: ${headers.join(', ')}`);
-          }
+            function toChartTime(dateObj) {
+                if (!dateObj || isNaN(dateObj.getTime())) return null;
+                return Math.floor(dateObj.getTime() / 1000);
+            }
 
-          const parsed = [];
-          for (const row of rows) {
-            const rawDate = row[dateCol];
-            const open = parseFloat(row[openCol]);
-            const high = parseFloat(row[highCol]);
-            const low = parseFloat(row[lowCol]);
-            const close = parseFloat(row[closeCol]);
+            // ---------- load Excel ----------
+            async function loadExcel() {
+                try {
+                    loadStatusEl.textContent = '⏳ reading…';
+                    const response = await fetch('data/ohlc.xlsx');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const arrayBuffer = await response.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
 
-            if (rawDate === undefined || rawDate === null || rawDate === '') continue;
-            if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
+                    if (!rows || rows.length === 0) throw new Error('No data rows found.');
 
-            const dateObj = parseExcelDate(rawDate);
-            if (!dateObj || isNaN(dateObj.getTime())) continue;
+                    const headers = Object.keys(rows[0]);
+                    const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
 
-            const timeSec = toChartTime(dateObj);
-            if (timeSec === null) continue;
+                    if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
+                        throw new Error(
+                            `Could not detect OHLC columns. Found: ${headers.join(', ')}`
+                        );
+                    }
 
-            // avoid duplicate timestamps (keep first occurrence)
-            const exists = parsed.some(d => d.time === timeSec);
-            if (exists) continue;
+                    const parsed = [];
+                    for (const row of rows) {
+                        const rawDate = row[dateCol];
+                        const open = parseFloat(row[openCol]);
+                        const high = parseFloat(row[highCol]);
+                        const low = parseFloat(row[lowCol]);
+                        const close = parseFloat(row[closeCol]);
 
-            parsed.push({
-              time: timeSec,
-              open: open,
-              high: high,
-              low: low,
-              close: close,
-              _date: dateObj
+                        if (rawDate === undefined || rawDate === null || rawDate === '') continue;
+                        if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
+
+                        const dateObj = parseExcelDate(rawDate);
+                        if (!dateObj || isNaN(dateObj.getTime())) continue;
+
+                        const timeSec = toChartTime(dateObj);
+                        if (timeSec === null) continue;
+
+                        // avoid duplicates
+                        const exists = parsed.some(d => d.time === timeSec);
+                        if (exists) continue;
+
+                        parsed.push({
+                            time: timeSec,
+                            open: open,
+                            high: high,
+                            low: low,
+                            close: close,
+                            _date: dateObj
+                        });
+                    }
+
+                    if (parsed.length === 0) throw new Error('No valid OHLC rows after parsing.');
+
+                    parsed.sort((a, b) => a.time - b.time);
+                    ohlcData = parsed;
+                    return parsed;
+                } catch (err) {
+                    console.error('Excel load error:', err);
+                    loadStatusEl.textContent = '⚠️ error loading data';
+                    loadStatusEl.style.color = '#e6b88a';
+                    return null;
+                }
+            }
+
+            // ---------- aggregation helpers ----------
+            function roundToInterval(timeSec, intervalSeconds) {
+                // returns the start of the interval for the given timestamp
+                return Math.floor(timeSec / intervalSeconds) * intervalSeconds;
+            }
+
+            function aggregateCandles(data, intervalSeconds) {
+                if (!data || data.length === 0) return [];
+                if (intervalSeconds <= 0) return data.slice();
+
+                const buckets = new Map();
+                for (const d of data) {
+                    const bucketKey = roundToInterval(d.time, intervalSeconds);
+                    if (!buckets.has(bucketKey)) {
+                        buckets.set(bucketKey, {
+                            time: bucketKey,
+                            open: d.open,
+                            high: d.high,
+                            low: d.low,
+                            close: d.close,
+                            count: 1,
+                            lastClose: d.close
+                        });
+                    } else {
+                        const b = buckets.get(bucketKey);
+                        b.high = Math.max(b.high, d.high);
+                        b.low = Math.min(b.low, d.low);
+                        b.close = d.close; // last close in bucket
+                        b.count += 1;
+                    }
+                }
+
+                const result = Array.from(buckets.values());
+                // sort by time
+                result.sort((a, b) => a.time - b.time);
+                return result;
+            }
+
+            // ---------- render chart ----------
+            function renderChart(data) {
+                if (!data || data.length === 0) {
+                    loadStatusEl.textContent = '⚠️ no data';
+                    return;
+                }
+
+                if (chart) {
+                    chart.remove();
+                    chart = null;
+                    candlestickSeries = null;
+                }
+
+                chart = LightweightCharts.createChart(container, {
+                    layout: {
+                        background: { color: '#0d131b' },
+                        textColor: '#b2c9e0',
+                    },
+                    grid: {
+                        vertLines: { color: '#1f2b36' },
+                        horzLines: { color: '#1f2b36' },
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                        vertLine: {
+                            color: '#4d6a89',
+                            width: 1,
+                            style: LightweightCharts.LineStyle.Dashed,
+                        },
+                        horzLine: {
+                            color: '#4d6a89',
+                            width: 1,
+                            style: LightweightCharts.LineStyle.Dashed,
+                        },
+                    },
+                    rightPriceScale: {
+                        borderColor: '#2a3a4a',
+                        scaleMargins: { top: 0.05, bottom: 0.05 },
+                    },
+                    timeScale: {
+                        borderColor: '#2a3a4a',
+                        timeVisible: true,
+                        secondsVisible: false,
+                        tickMarkFormatter: (time, tickMarkType, locale) => {
+                            const date = new Date(time * 1000);
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        },
+                    },
+                    handleScroll: { mouseWheel: true, pressedMouseMove: true },
+                    handleScale: { mouseWheel: true, pinch: true },
+                    width: container.clientWidth,
+                    height: container.clientHeight,
+                });
+
+                candlestickSeries = chart.addCandlestickSeries({
+                    upColor: '#4caf84',
+                    downColor: '#e2636b',
+                    borderDownColor: '#c84c54',
+                    borderUpColor: '#3e9b77',
+                    wickUpColor: '#6abf9a',
+                    wickDownColor: '#d97a82',
+                });
+
+                const chartData = data.map(d => ({
+                    time: d.time,
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close,
+                }));
+                candlestickSeries.setData(chartData);
+
+                candleCountEl.textContent = data.length;
+                if (data.length > 0) {
+                    const first = new Date(data[0].time * 1000);
+                    const last = new Date(data[data.length - 1].time * 1000);
+                    dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
+                } else {
+                    dateRangeEl.textContent = '—';
+                }
+
+                // apply current range
+                applyRange(visibleRange);
+
+                // resize observer
+                const resizeObserver = new ResizeObserver(() => {
+                    if (chart) {
+                        chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+                    }
+                });
+                resizeObserver.observe(container);
+
+                loadStatusEl.textContent = '✅ ready';
+                loadStatusEl.style.color = '#8fb0d0';
+            }
+
+            function formatDate(date) {
+                return date.toISOString().slice(0, 10);
+            }
+
+            // ---------- range + aggregation logic ----------
+            function getAggregationInterval(rangeKey, data) {
+                if (!data || data.length < 2) return 0;
+                // raw interval in seconds (assume 15min from sample)
+                const first = data[0];
+                const second = data[1] || data[0];
+                const rawInterval = Math.abs(second.time - first.time);
+                if (rawInterval === 0) return 0;
+
+                switch (rangeKey) {
+                    case '1D':
+                        return rawInterval; // keep as-is (15min)
+                    case '1W':
+                        return Math.max(rawInterval, 3600); // 1h
+                    case '1M':
+                        return Math.max(rawInterval, 3600 * 4); // 4h
+                    case '3M':
+                        return Math.max(rawInterval, 3600 * 8); // 8h
+                    case '1Y':
+                        return Math.max(rawInterval, 86400); // 1d
+                    case 'ALL':
+                        return Math.max(rawInterval, 86400 * 2); // 2d
+                    default:
+                        return 0;
+                }
+            }
+
+            function applyRange(rangeKey) {
+                if (!chart || !ohlcData.length) return;
+
+                const rawData = ohlcData;
+                const interval = getAggregationInterval(rangeKey, rawData);
+                let displayData = rawData;
+
+                if (interval > 0) {
+                    displayData = aggregateCandles(rawData, interval);
+                }
+
+                // update series with aggregated data
+                if (candlestickSeries) {
+                    const chartData = displayData.map(d => ({
+                        time: d.time,
+                        open: d.open,
+                        high: d.high,
+                        low: d.low,
+                        close: d.close,
+                    }));
+                    candlestickSeries.setData(chartData);
+                    candleCountEl.textContent = displayData.length;
+                    if (displayData.length > 0) {
+                        const first = new Date(displayData[0].time * 1000);
+                        const last = new Date(displayData[displayData.length - 1].time * 1000);
+                        dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
+                    }
+                }
+
+                // set visible range
+                const last = displayData[displayData.length - 1];
+                const first = displayData[0];
+                const lastTime = last.time;
+                let fromTime = first.time;
+                const now = new Date(lastTime * 1000);
+
+                switch (rangeKey) {
+                    case '1D': {
+                        const d = new Date(now);
+                        d.setDate(d.getDate() - 1);
+                        fromTime = Math.floor(d.getTime() / 1000);
+                        break;
+                    }
+                    case '1W': {
+                        const d = new Date(now);
+                        d.setDate(d.getDate() - 7);
+                        fromTime = Math.floor(d.getTime() / 1000);
+                        break;
+                    }
+                    case '1M': {
+                        const d = new Date(now);
+                        d.setMonth(d.getMonth() - 1);
+                        fromTime = Math.floor(d.getTime() / 1000);
+                        break;
+                    }
+                    case '3M': {
+                        const d = new Date(now);
+                        d.setMonth(d.getMonth() - 3);
+                        fromTime = Math.floor(d.getTime() / 1000);
+                        break;
+                    }
+                    case '1Y': {
+                        const d = new Date(now);
+                        d.setFullYear(d.getFullYear() - 1);
+                        fromTime = Math.floor(d.getTime() / 1000);
+                        break;
+                    }
+                    case 'ALL':
+                    default:
+                        fromTime = first.time;
+                        break;
+                }
+
+                if (fromTime < first.time) fromTime = first.time;
+                if (fromTime > lastTime) fromTime = first.time;
+
+                chart.timeScale().setVisibleRange({
+                    from: fromTime,
+                    to: lastTime,
+                });
+
+                timeButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.range === rangeKey);
+                });
+                visibleRange = rangeKey;
+            }
+
+            // ---------- init ----------
+            async function init() {
+                timeButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const range = btn.dataset.range;
+                        applyRange(range);
+                    });
+                });
+
+                const data = await loadExcel();
+                if (data && data.length > 0) {
+                    renderChart(data);
+                } else {
+                    loadStatusEl.textContent = '⚠️ no data loaded';
+                    loadStatusEl.style.color = '#e6b88a';
+                }
+            }
+
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    if (chart) {
+                        chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+                    }
+                }, 80);
             });
-          }
 
-          if (parsed.length === 0) {
-            throw new Error('No valid OHLC rows after parsing.');
-          }
-
-          // sort by time ascending
-          parsed.sort((a, b) => a.time - b.time);
-          ohlcData = parsed;
-          return parsed;
-        } catch (err) {
-          console.error('Excel load error:', err);
-          loadStatusEl.textContent = '⚠️ error loading data';
-          loadStatusEl.style.color = '#e6b88a';
-          return null;
-        }
-      }
-
-      // ---------- render chart ----------
-      function renderChart(data) {
-        if (!data || data.length === 0) {
-          loadStatusEl.textContent = '⚠️ no data';
-          return;
-        }
-
-        // destroy previous chart if any
-        if (chart) {
-          chart.remove();
-          chart = null;
-          candlestickSeries = null;
-        }
-
-        // create chart
-        chart = LightweightCharts.createChart(container, {
-          layout: {
-            background: { color: '#0d131b' },
-            textColor: '#b2c9e0',
-          },
-          grid: {
-            vertLines: { color: '#1f2b36' },
-            horzLines: { color: '#1f2b36' },
-          },
-          crosshair: {
-            mode: LightweightCharts.CrosshairMode.Normal,
-            vertLine: {
-              color: '#4d6a89',
-              width: 1,
-              style: LightweightCharts.LineStyle.Dashed,
-            },
-            horzLine: {
-              color: '#4d6a89',
-              width: 1,
-              style: LightweightCharts.LineStyle.Dashed,
-            },
-          },
-          rightPriceScale: {
-            borderColor: '#2a3a4a',
-            scaleMargins: {
-              top: 0.05,
-              bottom: 0.05,
-            },
-          },
-          timeScale: {
-            borderColor: '#2a3a4a',
-            timeVisible: true,
-            secondsVisible: false,
-            tickMarkFormatter: (time, tickMarkType, locale) => {
-              const date = new Date(time * 1000);
-              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            },
-          },
-          handleScroll: {
-            mouseWheel: true,
-            pressedMouseMove: true,
-          },
-          handleScale: {
-            mouseWheel: true,
-            pinch: true,
-          },
-          width: container.clientWidth,
-          height: container.clientHeight,
-        });
-
-        candlestickSeries = chart.addCandlestickSeries({
-          upColor: '#4caf84',
-          downColor: '#e2636b',
-          borderDownColor: '#c84c54',
-          borderUpColor: '#3e9b77',
-          wickUpColor: '#6abf9a',
-          wickDownColor: '#d97a82',
-        });
-
-        // set data
-        const chartData = data.map(d => ({
-          time: d.time,
-          open: d.open,
-          high: d.high,
-          low: d.low,
-          close: d.close,
-        }));
-        candlestickSeries.setData(chartData);
-
-        // update info
-        candleCountEl.textContent = data.length;
-        if (data.length > 0) {
-          const first = new Date(data[0].time * 1000);
-          const last = new Date(data[data.length - 1].time * 1000);
-          dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
-        } else {
-          dateRangeEl.textContent = '—';
-        }
-
-        // apply default range
-        applyRange(visibleRange);
-
-        // resize handling
-        const resizeObserver = new ResizeObserver(() => {
-          if (chart) {
-            chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-          }
-        });
-        resizeObserver.observe(container);
-
-        loadStatusEl.textContent = '✅ ready';
-        loadStatusEl.style.color = '#8fb0d0';
-      }
-
-      function formatDate(date) {
-        return date.toISOString().slice(0, 10);
-      }
-
-      // ---------- range controls ----------
-      function applyRange(rangeKey) {
-        if (!chart || !ohlcData.length) return;
-        const data = ohlcData;
-        const last = data[data.length - 1];
-        const first = data[0];
-        const lastTime = last.time;
-
-        let fromTime = first.time;
-        const now = new Date(lastTime * 1000);
-
-        switch (rangeKey) {
-          case '1D': {
-            const d = new Date(now);
-            d.setDate(d.getDate() - 1);
-            fromTime = Math.floor(d.getTime() / 1000);
-            break;
-          }
-          case '1W': {
-            const d = new Date(now);
-            d.setDate(d.getDate() - 7);
-            fromTime = Math.floor(d.getTime() / 1000);
-            break;
-          }
-          case '1M': {
-            const d = new Date(now);
-            d.setMonth(d.getMonth() - 1);
-            fromTime = Math.floor(d.getTime() / 1000);
-            break;
-          }
-          case '3M': {
-            const d = new Date(now);
-            d.setMonth(d.getMonth() - 3);
-            fromTime = Math.floor(d.getTime() / 1000);
-            break;
-          }
-          case '1Y': {
-            const d = new Date(now);
-            d.setFullYear(d.getFullYear() - 1);
-            fromTime = Math.floor(d.getTime() / 1000);
-            break;
-          }
-          case 'ALL':
-          default:
-            fromTime = first.time;
-            break;
-        }
-
-        // clamp
-        if (fromTime < first.time) fromTime = first.time;
-        if (fromTime > lastTime) fromTime = first.time;
-
-        chart.timeScale().setVisibleRange({
-          from: fromTime,
-          to: lastTime,
-        });
-
-        // active button
-        timeButtons.forEach(btn => {
-          btn.classList.toggle('active', btn.dataset.range === rangeKey);
-        });
-        visibleRange = rangeKey;
-      }
-
-      // ---------- init ----------
-      async function init() {
-        // set up button listeners
-        timeButtons.forEach(btn => {
-          btn.addEventListener('click', () => {
-            const range = btn.dataset.range;
-            applyRange(range);
-          });
-        });
-
-        const data = await loadExcel();
-        if (data && data.length > 0) {
-          renderChart(data);
-        } else {
-          loadStatusEl.textContent = '⚠️ no data loaded';
-          loadStatusEl.style.color = '#e6b88a';
-        }
-      }
-
-      // handle window resize (debounced)
-      let resizeTimer;
-      window.addEventListener('resize', () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => {
-          if (chart) {
-            chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-          }
-        }, 80);
-      });
-
-      // start
-      init();
-    })();
-  </script>
+            init();
+        })();
+    </script>
 </body>
 </html>
