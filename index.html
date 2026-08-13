@@ -6,6 +6,8 @@
     <title>HoldMyWork · OHLC</title>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js">
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    </script>
     <style>
         * {
             margin: 0;
@@ -80,45 +82,11 @@
             flex-shrink: 0;
         }
 
-        .time-buttons {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-
-        .time-buttons button {
-            background: transparent;
-            border: 1px solid #2d3a48;
-            color: #b6c9e0;
-            font-size: 0.7rem;
-            font-weight: 500;
-            padding: 4px 12px;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: 0.2s;
-            letter-spacing: 0.3px;
-            background: #141c26;
-        }
-
-        .time-buttons button:hover {
-            background: #25313f;
-            border-color: #5b748f;
-            color: #f0f7ff;
-        }
-
-        .time-buttons button.active {
-            background: #2b3d52;
-            border-color: #6b8bb0;
-            color: #ffffff;
-            box-shadow: 0 0 6px rgba(70, 130, 200, 0.2);
-        }
-
         .info-badge {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             gap: 8px 18px;
-            margin-left: auto;
             font-size: 0.75rem;
             color: #8499b3;
             background: #121b24;
@@ -172,10 +140,6 @@
                 font-size: 0.65rem;
                 padding: 2px 10px;
             }
-            .time-buttons button {
-                font-size: 0.6rem;
-                padding: 2px 10px;
-            }
         }
 
         ::-webkit-scrollbar {
@@ -199,19 +163,11 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Tak care of my work while I go do something else.
+            Take care of my work while I go do something else.
         </div>
     </header>
 
     <div class="chart-controls">
-        <div class="time-buttons" id="timeButtons">
-            <button data-range="1D">1D</button>
-            <button data-range="1W">1W</button>
-            <button data-range="1M" class="active">1M</button>
-            <button data-range="3M">3M</button>
-            <button data-range="1Y">1Y</button>
-            <button data-range="ALL">All</button>
-        </div>
         <div class="info-badge" id="infoBadge">
             <span>📄 <span class="num" id="candleCount">—</span> candles</span>
             <span>📅 <span id="dateRange">—</span></span>
@@ -231,39 +187,61 @@
             const candleCountEl = document.getElementById('candleCount');
             const dateRangeEl = document.getElementById('dateRange');
             const loadStatusEl = document.getElementById('loadStatus');
-            const timeButtons = document.querySelectorAll('#timeButtons button');
 
             let chart = null;
             let candlestickSeries = null;
-            let ohlcData = [];
-            let visibleRange = '1M';
 
-            // ---------- SAMPLE DATA (your 6 rows) ----------
-            const SAMPLE_DATA = [
-                { time: new Date('2020-01-01 09:15:00').getTime() / 1000, open: 100, high: 100, low: 100, close: 100.0214737 },
-                { time: new Date('2020-01-01 10:15:00').getTime() / 1000, open: 99.70423011, high: 99.50707164, low: 99.87286936, close: 99.93589005 },
-                { time: new Date('2020-01-01 11:15:00').getTime() / 1000, open: 99.61954718, high: 99.39207048, low: 99.82229719, close: 100.04746 },
-                { time: new Date('2020-01-01 12:15:00').getTime() / 1000, open: 99.71834394, high: 99.43349563, low: 99.77048017, close: 99.88671835 },
-                { time: new Date('2020-01-01 13:15:00').getTime() / 1000, open: 99.56293679, high: 99.44586135, low: 99.83894711, close: 99.90803646 },
-                { time: new Date('2020-01-01 14:15:00').getTime() / 1000, open: 99.57844649, high: 99.29855476, low: 99.78152824, close: 99.9113042 }
-            ];
+            // ---------- column detection ----------
+            function findColumns(headers) {
+                const lowerMap = {};
+                headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
 
-            // Try to load Excel, but fallback to sample data if it fails
+                const dateCol = lowerMap['date'] || lowerMap['timestamp'] || lowerMap['time'] || lowerMap['datetime'] ||
+                    null;
+                const openCol = lowerMap['open_norm'] || lowerMap['open'] || lowerMap['open price'] || null;
+                const highCol = lowerMap['high_norm'] || lowerMap['high'] || lowerMap['high price'] || null;
+                const lowCol = lowerMap['low_norm'] || lowerMap['low'] || lowerMap['low price'] || null;
+                const closeCol = lowerMap['close_norm'] || lowerMap['close'] || lowerMap['close price'] || lowerMap[
+                    'last'] || null;
+
+                return { dateCol, openCol, highCol, lowCol, closeCol };
+            }
+
+            function parseExcelDate(val) {
+                if (typeof val === 'number') {
+                    const epoch = new Date(1899, 11, 30);
+                    return new Date(epoch.getTime() + val * 86400000);
+                }
+                if (typeof val === 'string') {
+                    const d = new Date(val);
+                    if (!isNaN(d.getTime())) return d;
+                    const trimmed = val.trim();
+                    const ms = Date.parse(trimmed);
+                    if (!isNaN(ms)) return new Date(ms);
+                }
+                return null;
+            }
+
+            function toChartTime(dateObj) {
+                if (!dateObj || isNaN(dateObj.getTime())) return null;
+                return Math.floor(dateObj.getTime() / 1000);
+            }
+
+            // ---------- load Excel ----------
             async function loadExcel() {
                 try {
-                    loadStatusEl.textContent = '⏳ loading Excel…';
+                    loadStatusEl.textContent = '⏳ reading…';
                     
                     const response = await fetch('data/ohlc.xlsx');
                     
                     if (!response.ok) {
-                        console.warn('Excel file not found, using sample data');
-                        loadStatusEl.textContent = '📊 using sample data';
-                        return SAMPLE_DATA;
+                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
                     }
                     
                     const arrayBuffer = await response.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
                     
+                    // Look for "tab_1" specifically
                     let sheetName = 'tab_1';
                     if (!workbook.SheetNames.includes(sheetName)) {
                         sheetName = workbook.SheetNames[0];
@@ -273,25 +251,16 @@
                     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
 
                     if (!rows || rows.length === 0) {
-                        console.warn('No data in Excel, using sample data');
-                        loadStatusEl.textContent = '📊 using sample data';
-                        return SAMPLE_DATA;
+                        throw new Error('No data rows found in sheet: ' + sheetName);
                     }
 
                     const headers = Object.keys(rows[0]);
-                    const lowerMap = {};
-                    headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
-
-                    const dateCol = lowerMap['date'] || lowerMap['timestamp'] || lowerMap['time'] || null;
-                    const openCol = lowerMap['open_norm'] || lowerMap['open'] || null;
-                    const highCol = lowerMap['high_norm'] || lowerMap['high'] || null;
-                    const lowCol = lowerMap['low_norm'] || lowerMap['low'] || null;
-                    const closeCol = lowerMap['close_norm'] || lowerMap['close'] || null;
+                    const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
 
                     if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
-                        console.warn('Columns not found in Excel, using sample data');
-                        loadStatusEl.textContent = '📊 using sample data';
-                        return SAMPLE_DATA;
+                        throw new Error(
+                            `Could not detect OHLC columns. Found: ${headers.join(', ')}`
+                        );
                     }
 
                     const parsed = [];
@@ -302,78 +271,40 @@
                         const low = parseFloat(row[lowCol]);
                         const close = parseFloat(row[closeCol]);
 
-                        if (rawDate === undefined || rawDate === null) continue;
+                        if (rawDate === undefined || rawDate === null || rawDate === '') continue;
                         if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
 
-                        let dateObj;
-                        if (typeof rawDate === 'number') {
-                            const epoch = new Date(1899, 11, 30);
-                            dateObj = new Date(epoch.getTime() + rawDate * 86400000);
-                        } else {
-                            dateObj = new Date(rawDate);
-                        }
-                        
+                        const dateObj = parseExcelDate(rawDate);
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
 
-                        const timeSec = Math.floor(dateObj.getTime() / 1000);
+                        const timeSec = toChartTime(dateObj);
                         if (timeSec === null) continue;
+
+                        const exists = parsed.some(d => d.time === timeSec);
+                        if (exists) continue;
 
                         parsed.push({
                             time: timeSec,
                             open: open,
                             high: high,
                             low: low,
-                            close: close
+                            close: close,
+                            _date: dateObj
                         });
                     }
 
                     if (parsed.length === 0) {
-                        console.warn('No valid rows in Excel, using sample data');
-                        loadStatusEl.textContent = '📊 using sample data';
-                        return SAMPLE_DATA;
+                        throw new Error('No valid OHLC rows after parsing.');
                     }
 
                     parsed.sort((a, b) => a.time - b.time);
-                    loadStatusEl.textContent = '✅ Excel loaded';
                     return parsed;
                 } catch (err) {
-                    console.warn('Error loading Excel, using sample data:', err);
-                    loadStatusEl.textContent = '📊 using sample data';
-                    return SAMPLE_DATA;
+                    console.error('Excel load error:', err);
+                    loadStatusEl.textContent = `⚠️ ${err.message}`;
+                    loadStatusEl.style.color = '#e6b88a';
+                    return null;
                 }
-            }
-
-            // ---------- aggregation ----------
-            function roundToInterval(timeSec, intervalSeconds) {
-                return Math.floor(timeSec / intervalSeconds) * intervalSeconds;
-            }
-
-            function aggregateCandles(data, intervalSeconds) {
-                if (!data || data.length === 0) return [];
-                if (intervalSeconds <= 0) return data.slice();
-
-                const buckets = new Map();
-                for (const d of data) {
-                    const bucketKey = roundToInterval(d.time, intervalSeconds);
-                    if (!buckets.has(bucketKey)) {
-                        buckets.set(bucketKey, {
-                            time: bucketKey,
-                            open: d.open,
-                            high: d.high,
-                            low: d.low,
-                            close: d.close,
-                        });
-                    } else {
-                        const b = buckets.get(bucketKey);
-                        b.high = Math.max(b.high, d.high);
-                        b.low = Math.min(b.low, d.low);
-                        b.close = d.close;
-                    }
-                }
-
-                const result = Array.from(buckets.values());
-                result.sort((a, b) => a.time - b.time);
-                return result;
             }
 
             // ---------- render chart ----------
@@ -382,8 +313,6 @@
                     loadStatusEl.textContent = '⚠️ no data';
                     return;
                 }
-
-                console.log('Rendering', data.length, 'candles');
 
                 if (chart) {
                     chart.remove();
@@ -421,6 +350,10 @@
                         borderColor: '#2a3a4a',
                         timeVisible: true,
                         secondsVisible: false,
+                        tickMarkFormatter: (time, tickMarkType, locale) => {
+                            const date = new Date(time * 1000);
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        },
                     },
                     handleScroll: { mouseWheel: true, pressedMouseMove: true },
                     handleScale: { mouseWheel: true, pinch: true },
@@ -453,7 +386,8 @@
                     dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
                 }
 
-                applyRange(visibleRange);
+                // Fit all data
+                chart.timeScale().fitContent();
 
                 const resizeObserver = new ResizeObserver(() => {
                     if (chart) {
@@ -470,128 +404,9 @@
                 return date.toISOString().slice(0, 10);
             }
 
-            // ---------- range ----------
-            function getAggregationInterval(rangeKey, data) {
-                if (!data || data.length < 2) return 0;
-                const first = data[0];
-                const second = data[1] || data[0];
-                const rawInterval = Math.abs(second.time - first.time);
-                if (rawInterval === 0) return 0;
-
-                switch (rangeKey) {
-                    case '1D':
-                        return rawInterval;
-                    case '1W':
-                        return Math.max(rawInterval, 3600);
-                    case '1M':
-                        return Math.max(rawInterval, 3600 * 4);
-                    case '3M':
-                        return Math.max(rawInterval, 3600 * 8);
-                    case '1Y':
-                        return Math.max(rawInterval, 86400);
-                    case 'ALL':
-                        return Math.max(rawInterval, 86400 * 2);
-                    default:
-                        return 0;
-                }
-            }
-
-            function applyRange(rangeKey) {
-                if (!chart || !ohlcData.length) return;
-
-                const rawData = ohlcData;
-                const interval = getAggregationInterval(rangeKey, rawData);
-                let displayData = rawData;
-
-                if (interval > 0) {
-                    displayData = aggregateCandles(rawData, interval);
-                }
-
-                if (candlestickSeries) {
-                    const chartData = displayData.map(d => ({
-                        time: d.time,
-                        open: d.open,
-                        high: d.high,
-                        low: d.low,
-                        close: d.close,
-                    }));
-                    candlestickSeries.setData(chartData);
-                    candleCountEl.textContent = displayData.length;
-                    if (displayData.length > 0) {
-                        const first = new Date(displayData[0].time * 1000);
-                        const last = new Date(displayData[displayData.length - 1].time * 1000);
-                        dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
-                    }
-                }
-
-                const last = displayData[displayData.length - 1];
-                const first = displayData[0];
-                const lastTime = last.time;
-                let fromTime = first.time;
-                const now = new Date(lastTime * 1000);
-
-                switch (rangeKey) {
-                    case '1D': {
-                        const d = new Date(now);
-                        d.setDate(d.getDate() - 1);
-                        fromTime = Math.floor(d.getTime() / 1000);
-                        break;
-                    }
-                    case '1W': {
-                        const d = new Date(now);
-                        d.setDate(d.getDate() - 7);
-                        fromTime = Math.floor(d.getTime() / 1000);
-                        break;
-                    }
-                    case '1M': {
-                        const d = new Date(now);
-                        d.setMonth(d.getMonth() - 1);
-                        fromTime = Math.floor(d.getTime() / 1000);
-                        break;
-                    }
-                    case '3M': {
-                        const d = new Date(now);
-                        d.setMonth(d.getMonth() - 3);
-                        fromTime = Math.floor(d.getTime() / 1000);
-                        break;
-                    }
-                    case '1Y': {
-                        const d = new Date(now);
-                        d.setFullYear(d.getFullYear() - 1);
-                        fromTime = Math.floor(d.getTime() / 1000);
-                        break;
-                    }
-                    case 'ALL':
-                    default:
-                        fromTime = first.time;
-                        break;
-                }
-
-                if (fromTime < first.time) fromTime = first.time;
-                if (fromTime > lastTime) fromTime = first.time;
-
-                chart.timeScale().setVisibleRange({
-                    from: fromTime,
-                    to: lastTime,
-                });
-
-                timeButtons.forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.range === rangeKey);
-                });
-                visibleRange = rangeKey;
-            }
-
             // ---------- init ----------
             async function init() {
-                timeButtons.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const range = btn.dataset.range;
-                        applyRange(range);
-                    });
-                });
-
                 const data = await loadExcel();
-                ohlcData = data;
                 if (data && data.length > 0) {
                     renderChart(data);
                 } else {
