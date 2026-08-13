@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>HoldMyWork · OHLC</title>
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js">
+    <!-- Updated Lightweight Charts CDN - using a specific working version -->
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
     </script>
@@ -163,7 +164,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Take care of my work while I go do something else.
+            Takeee care of my work while I go do something else.
         </div>
     </header>
 
@@ -182,6 +183,8 @@
     <script>
         (function() {
             "use strict";
+
+            console.log('Lightweight Charts loaded:', typeof LightweightCharts);
 
             const container = document.getElementById('chart-container');
             const candleCountEl = document.getElementById('candleCount');
@@ -314,10 +317,20 @@
                     return;
                 }
 
+                console.log('Rendering', data.length, 'candles');
+
                 if (chart) {
                     chart.remove();
                     chart = null;
                     candlestickSeries = null;
+                }
+
+                // Check if LightweightCharts is available
+                if (typeof LightweightCharts === 'undefined') {
+                    console.error('LightweightCharts library not loaded!');
+                    loadStatusEl.textContent = '⚠️ Chart library not loaded';
+                    loadStatusEl.style.color = '#e6b88a';
+                    return;
                 }
 
                 chart = LightweightCharts.createChart(container, {
@@ -360,6 +373,8 @@
                     width: container.clientWidth,
                     height: container.clientHeight,
                 });
+
+                console.log('Chart created successfully');
 
                 candlestickSeries = chart.addCandlestickSeries({
                     upColor: '#4caf84',
