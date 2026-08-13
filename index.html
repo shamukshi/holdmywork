@@ -83,11 +83,45 @@
             flex-shrink: 0;
         }
 
+        .time-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .time-buttons button {
+            background: transparent;
+            border: 1px solid #2d3a48;
+            color: #b6c9e0;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+            letter-spacing: 0.3px;
+            background: #141c26;
+        }
+
+        .time-buttons button:hover {
+            background: #25313f;
+            border-color: #5b748f;
+            color: #f0f7ff;
+        }
+
+        .time-buttons button.active {
+            background: #2b3d52;
+            border-color: #6b8bb0;
+            color: #ffffff;
+            box-shadow: 0 0 6px rgba(70, 130, 200, 0.2);
+        }
+
         .info-badge {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             gap: 8px 18px;
+            margin-left: auto;
             font-size: 0.75rem;
             color: #8499b3;
             background: #121b24;
@@ -141,6 +175,10 @@
                 font-size: 0.65rem;
                 padding: 2px 10px;
             }
+            .time-buttons button {
+                font-size: 0.6rem;
+                padding: 2px 10px;
+            }
         }
 
         ::-webkit-scrollbar {
@@ -164,11 +202,19 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Take cccare of my work while I go do something else.
+            Take care of my work while I go do something else.
         </div>
     </header>
 
     <div class="chart-controls">
+        <div class="time-buttons" id="timeButtons">
+            <button data-range="15m" class="active">15m</button>
+            <button data-range="1h">1h</button>
+            <button data-range="1d">1d</button>
+            <button data-range="1w">1w</button>
+            <button data-range="1m">1m</button>
+            <button data-range="1y">1y</button>
+        </div>
         <div class="info-badge" id="infoBadge">
             <span>📄 <span class="num" id="candleCount">—</span> candles</span>
             <span>📅 <span id="dateRange">—</span></span>
@@ -184,15 +230,16 @@
         (function() {
             "use strict";
 
-            console.log('Lightweight Charts loaded:', typeof LightweightCharts);
-
             const container = document.getElementById('chart-container');
             const candleCountEl = document.getElementById('candleCount');
             const dateRangeEl = document.getElementById('dateRange');
             const loadStatusEl = document.getElementById('loadStatus');
+            const timeButtons = document.querySelectorAll('#timeButtons button');
 
             let chart = null;
             let candlestickSeries = null;
+            let ohlcData = [];
+            let currentRange = '15m';
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -230,6 +277,66 @@
                 return Math.floor(dateObj.getTime() / 1000);
             }
 
+            // ---------- aggregation ----------
+            function aggregateCandles(data, intervalSeconds) {
+                if (!data || data.length === 0) return [];
+                if (intervalSeconds <= 0) return data.slice();
+
+                const buckets = new Map();
+                for (const d of data) {
+                    // Round down to the interval start
+                    const bucketTime = Math.floor(d.time / intervalSeconds) * intervalSeconds;
+                    
+                    if (!buckets.has(bucketTime)) {
+                        buckets.set(bucketTime, {
+                            time: bucketTime,
+                            open: d.open,
+                            high: d.high,
+                            low: d.low,
+                            close: d.close,
+                            count: 1
+                        });
+                    } else {
+                        const b = buckets.get(bucketTime);
+                        b.high = Math.max(b.high, d.high);
+                        b.low = Math.min(b.low, d.low);
+                        b.close = d.close; // Last close in the bucket
+                        b.count += 1;
+                    }
+                }
+
+                const result = Array.from(buckets.values());
+                result.sort((a, b) => a.time - b.time);
+                return result;
+            }
+
+            // ---------- get interval for aggregation ----------
+            function getAggregationInterval(rangeKey, data) {
+                if (!data || data.length < 2) return 0;
+                
+                // Get the raw interval from the data (15 minutes)
+                const first = data[0];
+                const second = data[1] || data[0];
+                const rawInterval = Math.abs(second.time - first.time);
+                
+                switch (rangeKey) {
+                    case '15m':
+                        return 0; // No aggregation, show raw data
+                    case '1h':
+                        return 3600; // 1 hour
+                    case '1d':
+                        return 86400; // 1 day
+                    case '1w':
+                        return 604800; // 1 week
+                    case '1m':
+                        return 2592000; // 30 days (approx)
+                    case '1y':
+                        return 31536000; // 365 days (approx)
+                    default:
+                        return 0;
+                }
+            }
+
             // ---------- load Excel ----------
             async function loadExcel() {
                 try {
@@ -244,7 +351,6 @@
                     const arrayBuffer = await response.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
                     
-                    // Look for "tab_1" specifically
                     let sheetName = 'tab_1';
                     if (!workbook.SheetNames.includes(sheetName)) {
                         sheetName = workbook.SheetNames[0];
@@ -301,6 +407,7 @@
                     }
 
                     parsed.sort((a, b) => a.time - b.time);
+                    ohlcData = parsed;
                     return parsed;
                 } catch (err) {
                     console.error('Excel load error:', err);
@@ -311,14 +418,19 @@
             }
 
             // ---------- render chart ----------
-            function renderChart(data) {
+            function renderChart(data, rangeKey) {
                 if (!data || data.length === 0) {
                     loadStatusEl.textContent = '⚠️ no data';
                     return;
                 }
 
-                console.log('Rendering', data.length, 'candles');
-                console.log('First candle:', data[0]);
+                // Aggregate data based on the selected range
+                let displayData = data;
+                const interval = getAggregationInterval(rangeKey, data);
+                if (interval > 0) {
+                    displayData = aggregateCandles(data, interval);
+                    console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
+                }
 
                 if (chart) {
                     chart.remove();
@@ -326,7 +438,6 @@
                     candlestickSeries = null;
                 }
 
-                // Check if LightweightCharts is available
                 if (typeof LightweightCharts === 'undefined') {
                     console.error('LightweightCharts library not loaded!');
                     loadStatusEl.textContent = '⚠️ Chart library not loaded';
@@ -375,40 +486,31 @@
                     height: container.clientHeight,
                 });
 
-                console.log('Chart created successfully');
-
-                // Add candlestick series with custom colors
                 candlestickSeries = chart.addCandlestickSeries({
-                    upColor: '#26a69a',        // Green for up candles
-                    downColor: '#ef5350',      // Red for down candles
-                    borderUpColor: '#26a69a',  // Green border
-                    borderDownColor: '#ef5350',// Red border
-                    wickUpColor: '#26a69a',    // Green wick
-                    wickDownColor: '#ef5350',  // Red wick
+                    upColor: '#26a69a',
+                    downColor: '#ef5350',
+                    borderUpColor: '#26a69a',
+                    borderDownColor: '#ef5350',
+                    wickUpColor: '#26a69a',
+                    wickDownColor: '#ef5350',
                 });
 
-                // Prepare data for the chart
-                const chartData = data.map(d => ({
+                const chartData = displayData.map(d => ({
                     time: d.time,
                     open: d.open,
                     high: d.high,
                     low: d.low,
                     close: d.close,
                 }));
-
-                // Log some sample data to verify
-                console.log('Sample chart data:', chartData.slice(0, 3));
-
                 candlestickSeries.setData(chartData);
 
-                candleCountEl.textContent = data.length;
-                if (data.length > 0) {
-                    const first = new Date(data[0].time * 1000);
-                    const last = new Date(data[data.length - 1].time * 1000);
+                candleCountEl.textContent = displayData.length;
+                if (displayData.length > 0) {
+                    const first = new Date(displayData[0].time * 1000);
+                    const last = new Date(displayData[displayData.length - 1].time * 1000);
                     dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
                 }
 
-                // Fit all data
                 chart.timeScale().fitContent();
 
                 const resizeObserver = new ResizeObserver(() => {
@@ -426,11 +528,33 @@
                 return date.toISOString().slice(0, 10);
             }
 
+            // ---------- change time frame ----------
+            function changeTimeFrame(rangeKey) {
+                currentRange = rangeKey;
+                
+                // Update active button
+                timeButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.range === rangeKey);
+                });
+
+                if (ohlcData && ohlcData.length > 0) {
+                    renderChart(ohlcData, rangeKey);
+                }
+            }
+
             // ---------- init ----------
             async function init() {
+                // Set up button listeners
+                timeButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const range = btn.dataset.range;
+                        changeTimeFrame(range);
+                    });
+                });
+
                 const data = await loadExcel();
                 if (data && data.length > 0) {
-                    renderChart(data);
+                    renderChart(data, '15m');
                 } else {
                     loadStatusEl.textContent = '⚠️ no data loaded';
                     loadStatusEl.style.color = '#e6b88a';
