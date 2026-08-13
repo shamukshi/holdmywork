@@ -164,7 +164,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Taaake care of my work while I go do something else.
+            Take cccare of my work while I go do something else.
         </div>
     </header>
 
@@ -318,6 +318,7 @@
                 }
 
                 console.log('Rendering', data.length, 'candles');
+                console.log('First candle:', data[0]);
 
                 if (chart) {
                     chart.remove();
@@ -376,7 +377,7 @@
 
                 console.log('Chart created successfully');
 
-                // Traditional red and green candle colors
+                // Add candlestick series with custom colors
                 candlestickSeries = chart.addCandlestickSeries({
                     upColor: '#26a69a',        // Green for up candles
                     downColor: '#ef5350',      // Red for down candles
@@ -386,6 +387,7 @@
                     wickDownColor: '#ef5350',  // Red wick
                 });
 
+                // Prepare data for the chart
                 const chartData = data.map(d => ({
                     time: d.time,
                     open: d.open,
@@ -393,6 +395,10 @@
                     low: d.low,
                     close: d.close,
                 }));
+
+                // Log some sample data to verify
+                console.log('Sample chart data:', chartData.slice(0, 3));
+
                 candlestickSeries.setData(chartData);
 
                 candleCountEl.textContent = data.length;
