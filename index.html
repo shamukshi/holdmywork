@@ -238,7 +238,6 @@
 
             let ohlcData = [];
             let currentRange = '15m';
-            let plotlyChart = null;
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -271,13 +270,14 @@
                 return null;
             }
 
-            // ---------- aggregation ----------
+            // ---------- aggregation with exact timing ----------
             function aggregateCandles(data, intervalSeconds) {
                 if (!data || data.length === 0) return [];
                 if (intervalSeconds <= 0) return data.slice();
 
                 const buckets = new Map();
                 for (const d of data) {
+                    // Round down to the interval start
                     const bucketTime = Math.floor(d.time / intervalSeconds) * intervalSeconds;
                     
                     if (!buckets.has(bucketTime)) {
@@ -294,7 +294,7 @@
                         const b = buckets.get(bucketTime);
                         b.high = Math.max(b.high, d.high);
                         b.low = Math.min(b.low, d.low);
-                        b.close = d.close;
+                        b.close = d.close; // Last close in the bucket
                         b.count += 1;
                     }
                 }
@@ -308,17 +308,17 @@
             function getAggregationInterval(rangeKey) {
                 switch (rangeKey) {
                     case '15m':
-                        return 0;
+                        return 0; // 15 minutes
                     case '1h':
-                        return 3600;
+                        return 3600; // 1 hour
                     case '1d':
-                        return 86400;
+                        return 86400; // 1 day
                     case '1w':
-                        return 604800;
+                        return 604800; // 1 week
                     case '1m':
-                        return 2592000;
+                        return 2592000; // 30 days (approx)
                     case '1y':
-                        return 31536000;
+                        return 31536000; // 365 days (approx)
                     default:
                         return 0;
                 }
@@ -373,9 +373,11 @@
                         const dateObj = parseExcelDate(rawDate);
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
 
+                        // Preserve EXACT timestamp from Excel
                         const timeSec = Math.floor(dateObj.getTime() / 1000);
                         if (timeSec === null) continue;
 
+                        // Skip duplicates
                         const exists = parsed.some(d => d.time === timeSec);
                         if (exists) continue;
 
@@ -419,7 +421,7 @@
                     console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
                 }
 
-                // Prepare data for Plotly
+                // Prepare data for Plotly - using EXACT timestamps
                 const dates = displayData.map(d => d.date);
                 const openPrices = displayData.map(d => d.open);
                 const highPrices = displayData.map(d => d.high);
@@ -442,7 +444,14 @@
                         line: { color: '#ef5350' },
                         fillcolor: '#ef5350'
                     },
-                    name: 'OHLC'
+                    name: 'OHLC',
+                    xaxis: {
+                        type: 'date',
+                        tickformat: '%Y-%m-%d %H:%M',
+                        tickangle: -45,
+                        showgrid: true,
+                        gridcolor: '#1f2b36'
+                    }
                 };
 
                 const layout = {
@@ -454,14 +463,22 @@
                     },
                     xaxis: {
                         title: {
-                            text: 'Date',
+                            text: 'Date/Time',
                             font: { color: '#b2c9e0' }
                         },
                         gridcolor: '#1f2b36',
                         zerolinecolor: '#1f2b36',
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
-                        type: 'date'
+                        type: 'date',
+                        tickformat: '%Y-%m-%d %H:%M',
+                        tickangle: -45,
+                        showgrid: true,
+                        gridcolor: '#1f2b36',
+                        // Remove gaps between days by using continuous data
+                        rangebreaks: [],
+                        // Use exact timestamps without gaps
+                        dtick: 86400000 / 24, // 1 hour intervals for better display
                     },
                     yaxis: {
                         title: {
@@ -477,7 +494,7 @@
                         l: 60,
                         r: 20,
                         t: 20,
-                        b: 40
+                        b: 50
                     },
                     hovermode: 'x unified',
                     showlegend: false,
@@ -548,6 +565,8 @@
 
                 const data = await loadExcel();
                 if (data && data.length > 0) {
+                    console.log('First candle:', data[0]);
+                    console.log('Last candle:', data[data.length - 1]);
                     renderChart(data, '15m');
                 } else {
                     loadStatusEl.textContent = '⚠️ no data loaded';
