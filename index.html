@@ -203,7 +203,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Tttttttke care of my work while I go do something else.
+            Take care of my work while I go do something else.
         </div>
     </header>
 
@@ -394,27 +394,17 @@
                     return;
                 }
 
-                // Prepare data for Plotly - using numeric index to remove gaps
-                const index = data.map((_, i) => i);
+                // Use actual Date objects for x-axis to enable proper zoom
                 const dates = data.map(d => d.date);
                 const openPrices = data.map(d => d.open);
                 const highPrices = data.map(d => d.high);
                 const lowPrices = data.map(d => d.low);
                 const closePrices = data.map(d => d.close);
 
-                // Create custom tick labels with date and time
-                const tickLabels = dates.map(d => {
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const hours = String(d.getHours()).padStart(2, '0');
-                    const minutes = String(d.getMinutes()).padStart(2, '0');
-                    return `${month}/${day} ${hours}:${minutes}`;
-                });
-
-                // Candlestick trace
+                // Candlestick trace with actual dates
                 const trace = {
                     type: 'candlestick',
-                    x: index,
+                    x: dates,
                     open: openPrices,
                     high: highPrices,
                     low: lowPrices,
@@ -428,8 +418,7 @@
                         fillcolor: '#ef5350'
                     },
                     name: 'OHLC',
-                    hovertext: tickLabels,
-                    hovertemplate: '<b>%{hovertext}</b><br>' +
+                    hovertemplate: '<b>%{x|%Y-%m-%d %H:%M}</b><br>' +
                         'Open: %{open:.4f}<br>' +
                         'High: %{high:.4f}<br>' +
                         'Low: %{low:.4f}<br>' +
@@ -452,15 +441,14 @@
                         zerolinecolor: '#1f2b36',
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
-                        tickmode: 'array',
-                        tickvals: index,
-                        ticktext: tickLabels,
+                        tickformat: '%Y-%m-%d %H:%M',
                         tickangle: -45,
                         showspikes: true,
                         spikemode: 'across',
                         spikethickness: 1,
                         spikecolor: '#4d6a89',
-                        tickfont: { size: 10 }
+                        tickfont: { size: 10 },
+                        type: 'date'
                     },
                     yaxis: {
                         title: {
@@ -470,7 +458,8 @@
                         gridcolor: '#1f2b36',
                         zerolinecolor: '#1f2b36',
                         color: '#b2c9e0',
-                        side: 'right'
+                        side: 'right',
+                        fixedrange: false
                     },
                     margin: {
                         l: 60,
