@@ -7,7 +7,8 @@
     <!-- Plotly CDN -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js">
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    <!-- Papaparse for robust CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js">
     </script>
     <style>
         * {
@@ -208,12 +209,11 @@
 
     <div class="chart-controls">
         <div class="time-buttons" id="timeButtons">
-            <button data-range="15m" class="active">15m</button>
+            <button data-range="1m" class="active">1m</button>
+            <button data-range="5m">5m</button>
+            <button data-range="15m">15m</button>
             <button data-range="1h">1h</button>
             <button data-range="1d">1d</button>
-            <button data-range="1w">1w</button>
-            <button data-range="1m">1m</button>
-            <button data-range="1y">1y</button>
         </div>
         <div class="info-badge" id="infoBadge">
             <span>📄 <span class="num" id="candleCount">—</span> candles</span>
@@ -236,13 +236,27 @@
             const loadStatusEl = document.getElementById('loadStatus');
             const timeButtons = document.querySelectorAll('#timeButtons button');
 
-            let ohlcData = [];
-            let currentRange = '15m';
+            // mapping range key -> CSV file path
+            const fileMap = {
+                '1m': 'data/1_min.csv',
+                '5m': 'data/5_min.csv',
+                '15m': 'data/15_min.csv',
+                '1h': 'data/1_hr.csv',
+                '1d': 'data/1_day.csv'
+            };
 
-            // ---------- column detection ----------
+            // cache for loaded CSV data: { filePath: [ {time, open, high, low, close, date} ] }
+            const dataCache = new Map();
+            let currentRange = '1m';
+
+            // ---------- column detection (case-insensitive) ----------
             function findColumns(headers) {
                 const lowerMap = {};
-                headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
+                headers.forEach(h => {
+                    if (h !== undefined && h !== null) {
+                        lowerMap[h.trim().toLowerCase()] = h;
+                    }
+                });
 
                 const dateCol = lowerMap['date'] || lowerMap['timestamp'] || lowerMap['time'] || lowerMap['datetime'] ||
                     null;
@@ -270,133 +284,101 @@
                 return null;
             }
 
-            // ---------- aggregation ----------
-            function aggregateCandles(data, intervalSeconds) {
-                if (!data || data.length === 0) return [];
-                if (intervalSeconds <= 0) return data.slice();
+            // ---------- parse rows (array of objects) ----------
+            function parseRows(rows) {
+                if (!rows || rows.length === 0) return [];
 
-                const buckets = new Map();
-                for (const d of data) {
-                    const bucketTime = Math.floor(d.time / intervalSeconds) * intervalSeconds;
-                    
-                    if (!buckets.has(bucketTime)) {
-                        buckets.set(bucketTime, {
-                            time: bucketTime,
-                            open: d.open,
-                            high: d.high,
-                            low: d.low,
-                            close: d.close,
-                            count: 1,
-                            date: new Date(bucketTime * 1000)
-                        });
-                    } else {
-                        const b = buckets.get(bucketTime);
-                        b.high = Math.max(b.high, d.high);
-                        b.low = Math.min(b.low, d.low);
-                        b.close = d.close;
-                        b.count += 1;
-                    }
+                const headers = Object.keys(rows[0]);
+                const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
+
+                if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
+                    console.warn('Could not detect OHLC columns. Found:', headers);
+                    return [];
                 }
 
-                const result = Array.from(buckets.values());
-                result.sort((a, b) => a.time - b.time);
-                return result;
-            }
+                const parsed = [];
+                for (const row of rows) {
+                    const rawDate = row[dateCol];
+                    const open = parseFloat(row[openCol]);
+                    const high = parseFloat(row[highCol]);
+                    const low = parseFloat(row[lowCol]);
+                    const close = parseFloat(row[closeCol]);
 
-            // ---------- get interval for aggregation ----------
-            function getAggregationInterval(rangeKey) {
-                switch (rangeKey) {
-                    case '15m':
-                        return 0;
-                    case '1h':
-                        return 3600;
-                    case '1d':
-                        return 86400;
-                    case '1w':
-                        return 604800;
-                    case '1m':
-                        return 2592000;
-                    case '1y':
-                        return 31536000;
-                    default:
-                        return 0;
+                    if (rawDate === undefined || rawDate === null || rawDate === '') continue;
+                    if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
+
+                    const dateObj = parseExcelDate(rawDate);
+                    if (!dateObj || isNaN(dateObj.getTime())) continue;
+
+                    const timeSec = Math.floor(dateObj.getTime() / 1000);
+                    if (timeSec === null) continue;
+
+                    // avoid duplicates (just in case)
+                    const exists = parsed.some(d => d.time === timeSec);
+                    if (exists) continue;
+
+                    parsed.push({
+                        time: timeSec,
+                        open: open,
+                        high: high,
+                        low: low,
+                        close: close,
+                        date: dateObj
+                    });
                 }
+
+                parsed.sort((a, b) => a.time - b.time);
+                return parsed;
             }
 
-            // ---------- load Excel ----------
-            async function loadExcel() {
+            // ---------- load CSV file using PapaParse ----------
+            async function loadCSV(filePath) {
+                // if already cached, return
+                if (dataCache.has(filePath)) {
+                    return dataCache.get(filePath);
+                }
+
                 try {
-                    loadStatusEl.textContent = '⏳ reading…';
-                    
-                    const response = await fetch('data/ohlc.xlsx');
-                    
+                    loadStatusEl.textContent = `⏳ fetching ${filePath}…`;
+                    loadStatusEl.style.color = '#8fb0d0';
+
+                    const response = await fetch(filePath);
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
-                    }
-                    
-                    const arrayBuffer = await response.arrayBuffer();
-                    const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
-                    
-                    let sheetName = 'tab_1';
-                    if (!workbook.SheetNames.includes(sheetName)) {
-                        sheetName = workbook.SheetNames[0];
-                    }
-                    
-                    const firstSheet = workbook.Sheets[sheetName];
-                    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
-
-                    if (!rows || rows.length === 0) {
-                        throw new Error('No data rows found in sheet: ' + sheetName);
+                        throw new Error(`HTTP ${response.status}: Could not load ${filePath}`);
                     }
 
-                    const headers = Object.keys(rows[0]);
-                    const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
+                    const csvText = await response.text();
 
-                    if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
-                        throw new Error(
-                            `Could not detect OHLC columns. Found: ${headers.join(', ')}`
-                        );
+                    // Use PapaParse to parse CSV with header detection
+                    const result = Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        trimHeaders: true,
+                        dynamicTyping: false // we'll parse manually
+                    });
+
+                    if (result.errors && result.errors.length > 0) {
+                        console.warn('CSV parsing warnings:', result.errors);
                     }
 
-                    const parsed = [];
-                    for (const row of rows) {
-                        const rawDate = row[dateCol];
-                        const open = parseFloat(row[openCol]);
-                        const high = parseFloat(row[highCol]);
-                        const low = parseFloat(row[lowCol]);
-                        const close = parseFloat(row[closeCol]);
+                    const rows = result.data.filter(row => {
+                        // filter out completely empty rows
+                        return Object.values(row).some(v => v !== undefined && v !== null && v !== '');
+                    });
 
-                        if (rawDate === undefined || rawDate === null || rawDate === '') continue;
-                        if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
-
-                        const dateObj = parseExcelDate(rawDate);
-                        if (!dateObj || isNaN(dateObj.getTime())) continue;
-
-                        const timeSec = Math.floor(dateObj.getTime() / 1000);
-                        if (timeSec === null) continue;
-
-                        const exists = parsed.some(d => d.time === timeSec);
-                        if (exists) continue;
-
-                        parsed.push({
-                            time: timeSec,
-                            open: open,
-                            high: high,
-                            low: low,
-                            close: close,
-                            date: dateObj
-                        });
+                    if (rows.length === 0) {
+                        throw new Error('No data rows found in ' + filePath);
                     }
 
+                    const parsed = parseRows(rows);
                     if (parsed.length === 0) {
-                        throw new Error('No valid OHLC rows after parsing.');
+                        throw new Error('No valid OHLC rows after parsing ' + filePath);
                     }
 
-                    parsed.sort((a, b) => a.time - b.time);
-                    ohlcData = parsed;
+                    dataCache.set(filePath, parsed);
                     return parsed;
                 } catch (err) {
-                    console.error('Excel load error:', err);
+                    console.error('CSV load error:', err);
                     loadStatusEl.textContent = `⚠️ ${err.message}`;
                     loadStatusEl.style.color = '#e6b88a';
                     return null;
@@ -404,27 +386,21 @@
             }
 
             // ---------- render chart with Plotly ----------
-            function renderChart(data, rangeKey) {
+            function renderChart(data) {
                 if (!data || data.length === 0) {
                     loadStatusEl.textContent = '⚠️ no data';
+                    candleCountEl.textContent = '0';
+                    dateRangeEl.textContent = '—';
                     return;
                 }
 
-                // Aggregate data based on the selected range
-                let displayData = data;
-                const interval = getAggregationInterval(rangeKey);
-                if (interval > 0) {
-                    displayData = aggregateCandles(data, interval);
-                    console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
-                }
-
-                // Prepare data for Plotly - using numeric index instead of dates to remove gaps
-                const index = displayData.map((_, i) => i);
-                const dates = displayData.map(d => d.date);
-                const openPrices = displayData.map(d => d.open);
-                const highPrices = displayData.map(d => d.high);
-                const lowPrices = displayData.map(d => d.low);
-                const closePrices = displayData.map(d => d.close);
+                // Prepare data for Plotly - using numeric index to remove gaps
+                const index = data.map((_, i) => i);
+                const dates = data.map(d => d.date);
+                const openPrices = data.map(d => d.open);
+                const highPrices = data.map(d => d.high);
+                const lowPrices = data.map(d => d.low);
+                const closePrices = data.map(d => d.close);
 
                 // Create custom tick labels with date and time
                 const tickLabels = dates.map(d => {
@@ -435,7 +411,7 @@
                     return `${month}/${day} ${hours}:${minutes}`;
                 });
 
-                // Create candlestick trace using numeric x values
+                // Candlestick trace
                 const trace = {
                     type: 'candlestick',
                     x: index,
@@ -484,10 +460,7 @@
                         spikemode: 'across',
                         spikethickness: 1,
                         spikecolor: '#4d6a89',
-                        // Show only every Nth label to avoid crowding
-                        tickfont: {
-                            size: 10
-                        }
+                        tickfont: { size: 10 }
                     },
                     yaxis: {
                         title: {
@@ -522,14 +495,13 @@
                     displaylogo: false
                 };
 
-                // Render the chart
                 Plotly.newPlot(container, [trace], layout, config);
 
                 // Update info
-                candleCountEl.textContent = displayData.length;
-                if (displayData.length > 0) {
-                    const first = displayData[0].date;
-                    const last = displayData[displayData.length - 1].date;
+                candleCountEl.textContent = data.length;
+                if (data.length > 0) {
+                    const first = data[0].date;
+                    const last = data[data.length - 1].date;
                     dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
                 }
 
@@ -541,17 +513,32 @@
                 return date.toISOString().slice(0, 10);
             }
 
-            // ---------- change time frame ----------
-            function changeTimeFrame(rangeKey) {
+            // ---------- change time frame (load CSV and render) ----------
+            async function changeTimeFrame(rangeKey) {
                 currentRange = rangeKey;
-                
+
                 // Update active button
                 timeButtons.forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.range === rangeKey);
                 });
 
-                if (ohlcData && ohlcData.length > 0) {
-                    renderChart(ohlcData, rangeKey);
+                const filePath = fileMap[rangeKey];
+                if (!filePath) {
+                    loadStatusEl.textContent = '⚠️ unknown range';
+                    return;
+                }
+
+                loadStatusEl.textContent = `⏳ loading ${filePath}…`;
+                loadStatusEl.style.color = '#8fb0d0';
+
+                const data = await loadCSV(filePath);
+                if (data && data.length > 0) {
+                    renderChart(data);
+                } else {
+                    loadStatusEl.textContent = `⚠️ no data in ${filePath}`;
+                    loadStatusEl.style.color = '#e6b88a';
+                    candleCountEl.textContent = '0';
+                    dateRangeEl.textContent = '—';
                 }
             }
 
@@ -572,13 +559,8 @@
                     });
                 });
 
-                const data = await loadExcel();
-                if (data && data.length > 0) {
-                    renderChart(data, '15m');
-                } else {
-                    loadStatusEl.textContent = '⚠️ no data loaded';
-                    loadStatusEl.style.color = '#e6b88a';
-                }
+                // load default: 1m
+                await changeTimeFrame('1m');
             }
 
             let resizeTimer;
@@ -592,4 +574,3 @@
     </script>
 </body>
 </html>
-
