@@ -373,8 +373,6 @@
                         const dateObj = parseExcelDate(rawDate);
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
 
-                        // Fix: Ensure we preserve the exact time from Excel
-                        // Create date with the exact time from Excel
                         const timeSec = Math.floor(dateObj.getTime() / 1000);
                         if (timeSec === null) continue;
 
@@ -464,12 +462,48 @@
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
                         type: 'date',
-                        tickformat: '%b %d, %H:%M',  // This forces proper time display
+                        tickformat: '%b %d, %H:%M',
                         tickangle: -45,
                         showspikes: true,
                         spikemode: 'across',
                         spikethickness: 1,
-                        spikecolor: '#4d6a89'
+                        spikecolor: '#4d6a89',
+                        // Only show ticks between 9 AM and 4 PM
+                        tickvals: (function() {
+                            const vals = [];
+                            for (const d of dates) {
+                                const hour = d.getHours();
+                                const minutes = d.getMinutes();
+                                // Include times between 9:00 AM and 4:00 PM
+                                if ((hour >= 9 && hour < 16) || (hour === 16 && minutes === 0)) {
+                                    vals.push(d);
+                                }
+                            }
+                            // Return unique values (remove duplicates)
+                            const uniqueVals = [];
+                            const seen = new Set();
+                            for (const v of vals) {
+                                const key = v.getTime();
+                                if (!seen.has(key)) {
+                                    seen.add(key);
+                                    uniqueVals.push(v);
+                                }
+                            }
+                            return uniqueVals;
+                        })(),
+                        // Force showing only trading hours
+                        range: (function() {
+                            if (dates.length === 0) return undefined;
+                            const first = dates[0];
+                            const last = dates[dates.length - 1];
+                            // Start from 9 AM on the first day
+                            const start = new Date(first);
+                            start.setHours(9, 0, 0, 0);
+                            // End at 4 PM on the last day
+                            const end = new Date(last);
+                            end.setHours(16, 0, 0, 0);
+                            return [start, end];
+                        })()
                     },
                     yaxis: {
                         title: {
