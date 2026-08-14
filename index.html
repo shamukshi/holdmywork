@@ -202,7 +202,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Takkkke care of my work while I go do something else.
+            Take care of my work while I go do something else.
         </div>
     </header>
 
@@ -418,19 +418,31 @@
                     console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
                 }
 
-                // Create string labels in the format "MM/DD HH:MM"
-                const labels = displayData.map(d => {
-                    const month = String(d.date.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.date.getDate()).padStart(2, '0');
+                // Create labels
+                const timeLabels = displayData.map(d => {
                     const hours = String(d.date.getHours()).padStart(2, '0');
                     const minutes = String(d.date.getMinutes()).padStart(2, '0');
-                    return `${month}/${day} ${hours}:${minutes}`;
+                    return `${hours}:${minutes}`;
                 });
+
+                // Create date labels for the secondary x-axis (only show unique dates)
+                const dateLabels = [];
+                const datePositions = [];
+                let currentDate = '';
+                for (let i = 0; i < displayData.length; i++) {
+                    const d = displayData[i].date;
+                    const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                    if (dateStr !== currentDate) {
+                        currentDate = dateStr;
+                        dateLabels.push(dateStr);
+                        datePositions.push(i);
+                    }
+                }
 
                 // Use numeric indices for x-axis
                 const indices = displayData.map((_, i) => i);
 
-                // Create candlestick trace using string labels
+                // Create candlestick trace
                 const trace = {
                     type: 'candlestick',
                     x: indices,
@@ -447,7 +459,7 @@
                         fillcolor: '#ef5350'
                     },
                     name: 'OHLC',
-                    text: labels,
+                    text: timeLabels,
                     hovertemplate: '<b>%{text}</b><br>' +
                         'Open: %{open:.4f}<br>' +
                         'High: %{high:.4f}<br>' +
@@ -455,10 +467,10 @@
                         'Close: %{close:.4f}<extra></extra>'
                 };
 
-                // Filter labels to show every Nth (to avoid crowding)
-                const step = Math.max(1, Math.floor(labels.length / 20));
+                // Filter time labels to show every Nth
+                const step = Math.max(1, Math.floor(timeLabels.length / 25));
                 const filteredIndices = indices.filter((_, i) => i % step === 0);
-                const filteredLabels = labels.filter((_, i) => i % step === 0);
+                const filteredTimeLabels = timeLabels.filter((_, i) => i % step === 0);
 
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -469,7 +481,7 @@
                     },
                     xaxis: {
                         title: {
-                            text: 'Date/Time',
+                            text: 'Time',
                             font: { color: '#b2c9e0' }
                         },
                         gridcolor: '#1f2b36',
@@ -478,7 +490,7 @@
                         rangeslider: { visible: false },
                         tickmode: 'array',
                         tickvals: filteredIndices,
-                        ticktext: filteredLabels,
+                        ticktext: filteredTimeLabels,
                         tickangle: -45,
                         showspikes: true,
                         spikemode: 'across',
@@ -487,8 +499,31 @@
                         tickfont: {
                             size: 10
                         },
-                        // Fix: Force the axis to show all data without gaps
                         range: [-0.5, indices.length - 0.5]
+                    },
+                    // Secondary x-axis for dates (below the main x-axis)
+                    xaxis2: {
+                        title: {
+                            text: 'Date',
+                            font: { color: '#8499b3', size: 11 }
+                        },
+                        overlaying: 'x',
+                        side: 'bottom',
+                        tickmode: 'array',
+                        tickvals: datePositions,
+                        ticktext: dateLabels,
+                        tickfont: {
+                            color: '#8499b3',
+                            size: 11
+                        },
+                        showgrid: false,
+                        zeroline: false,
+                        anchor: 'y',
+                        domain: [0, 1],
+                        position: 0,
+                        tickangle: 0,
+                        // Position it below the main x-axis
+                        automargin: true
                     },
                     yaxis: {
                         title: {
