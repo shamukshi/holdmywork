@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>HoldMyWork · OHLC</title>
-    <!-- Lightweight Charts CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js">
+    <!-- Plotly CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
     </script>
@@ -202,7 +202,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Utkya yz gandu ahe.
+            Take care of my work while I go do something else.
         </div>
     </header>
 
@@ -236,10 +236,9 @@
             const loadStatusEl = document.getElementById('loadStatus');
             const timeButtons = document.querySelectorAll('#timeButtons button');
 
-            let chart = null;
-            let candlestickSeries = null;
             let ohlcData = [];
             let currentRange = '15m';
+            let plotlyChart = null;
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -272,11 +271,6 @@
                 return null;
             }
 
-            function toChartTime(dateObj) {
-                if (!dateObj || isNaN(dateObj.getTime())) return null;
-                return Math.floor(dateObj.getTime() / 1000);
-            }
-
             // ---------- aggregation ----------
             function aggregateCandles(data, intervalSeconds) {
                 if (!data || data.length === 0) return [];
@@ -284,7 +278,6 @@
 
                 const buckets = new Map();
                 for (const d of data) {
-                    // Round down to the interval start
                     const bucketTime = Math.floor(d.time / intervalSeconds) * intervalSeconds;
                     
                     if (!buckets.has(bucketTime)) {
@@ -294,13 +287,14 @@
                             high: d.high,
                             low: d.low,
                             close: d.close,
-                            count: 1
+                            count: 1,
+                            date: new Date(bucketTime * 1000)
                         });
                     } else {
                         const b = buckets.get(bucketTime);
                         b.high = Math.max(b.high, d.high);
                         b.low = Math.min(b.low, d.low);
-                        b.close = d.close; // Last close in the bucket
+                        b.close = d.close;
                         b.count += 1;
                     }
                 }
@@ -311,27 +305,20 @@
             }
 
             // ---------- get interval for aggregation ----------
-            function getAggregationInterval(rangeKey, data) {
-                if (!data || data.length < 2) return 0;
-                
-                // Get the raw interval from the data (15 minutes)
-                const first = data[0];
-                const second = data[1] || data[0];
-                const rawInterval = Math.abs(second.time - first.time);
-                
+            function getAggregationInterval(rangeKey) {
                 switch (rangeKey) {
                     case '15m':
-                        return 0; // No aggregation, show raw data
+                        return 0;
                     case '1h':
-                        return 3600; // 1 hour
+                        return 3600;
                     case '1d':
-                        return 86400; // 1 day
+                        return 86400;
                     case '1w':
-                        return 604800; // 1 week
+                        return 604800;
                     case '1m':
-                        return 2592000; // 30 days (approx)
+                        return 2592000;
                     case '1y':
-                        return 31536000; // 365 days (approx)
+                        return 31536000;
                     default:
                         return 0;
                 }
@@ -386,7 +373,7 @@
                         const dateObj = parseExcelDate(rawDate);
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
 
-                        const timeSec = toChartTime(dateObj);
+                        const timeSec = Math.floor(dateObj.getTime() / 1000);
                         if (timeSec === null) continue;
 
                         const exists = parsed.some(d => d.time === timeSec);
@@ -398,7 +385,7 @@
                             high: high,
                             low: low,
                             close: close,
-                            _date: dateObj
+                            date: dateObj
                         });
                     }
 
@@ -417,7 +404,7 @@
                 }
             }
 
-            // ---------- render chart ----------
+            // ---------- render chart with Plotly ----------
             function renderChart(data, rangeKey) {
                 if (!data || data.length === 0) {
                     loadStatusEl.textContent = '⚠️ no data';
@@ -426,99 +413,99 @@
 
                 // Aggregate data based on the selected range
                 let displayData = data;
-                const interval = getAggregationInterval(rangeKey, data);
+                const interval = getAggregationInterval(rangeKey);
                 if (interval > 0) {
                     displayData = aggregateCandles(data, interval);
                     console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
                 }
 
-                if (chart) {
-                    chart.remove();
-                    chart = null;
-                    candlestickSeries = null;
-                }
+                // Prepare data for Plotly
+                const dates = displayData.map(d => d.date);
+                const openPrices = displayData.map(d => d.open);
+                const highPrices = displayData.map(d => d.high);
+                const lowPrices = displayData.map(d => d.low);
+                const closePrices = displayData.map(d => d.close);
 
-                if (typeof LightweightCharts === 'undefined') {
-                    console.error('LightweightCharts library not loaded!');
-                    loadStatusEl.textContent = '⚠️ Chart library not loaded';
-                    loadStatusEl.style.color = '#e6b88a';
-                    return;
-                }
+                // Create candlestick trace
+                const trace = {
+                    type: 'candlestick',
+                    x: dates,
+                    open: openPrices,
+                    high: highPrices,
+                    low: lowPrices,
+                    close: closePrices,
+                    increasing: {
+                        line: { color: '#26a69a' },
+                        fillcolor: '#26a69a'
+                    },
+                    decreasing: {
+                        line: { color: '#ef5350' },
+                        fillcolor: '#ef5350'
+                    },
+                    name: 'OHLC'
+                };
 
-                chart = LightweightCharts.createChart(container, {
-                    layout: {
-                        background: { color: '#0d131b' },
-                        textColor: '#b2c9e0',
+                const layout = {
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: {
+                        color: '#b2c9e0',
+                        family: 'system-ui, -apple-system, sans-serif'
                     },
-                    grid: {
-                        vertLines: { color: '#1f2b36' },
-                        horzLines: { color: '#1f2b36' },
-                    },
-                    crosshair: {
-                        mode: LightweightCharts.CrosshairMode.Normal,
-                        vertLine: {
-                            color: '#4d6a89',
-                            width: 1,
-                            style: LightweightCharts.LineStyle.Dashed,
+                    xaxis: {
+                        title: {
+                            text: 'Date',
+                            font: { color: '#b2c9e0' }
                         },
-                        horzLine: {
-                            color: '#4d6a89',
-                            width: 1,
-                            style: LightweightCharts.LineStyle.Dashed,
+                        gridcolor: '#1f2b36',
+                        zerolinecolor: '#1f2b36',
+                        color: '#b2c9e0',
+                        rangeslider: { visible: false },
+                        type: 'date'
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Price',
+                            font: { color: '#b2c9e0' }
                         },
+                        gridcolor: '#1f2b36',
+                        zerolinecolor: '#1f2b36',
+                        color: '#b2c9e0',
+                        side: 'right'
                     },
-                    rightPriceScale: {
-                        borderColor: '#2a3a4a',
-                        scaleMargins: { top: 0.05, bottom: 0.05 },
+                    margin: {
+                        l: 60,
+                        r: 20,
+                        t: 20,
+                        b: 40
                     },
-                    timeScale: {
-                        borderColor: '#2a3a4a',
-                        timeVisible: true,
-                        secondsVisible: false,
-                        tickMarkFormatter: (time, tickMarkType, locale) => {
-                            const date = new Date(time * 1000);
-                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        },
-                    },
-                    handleScroll: { mouseWheel: true, pressedMouseMove: true },
-                    handleScale: { mouseWheel: true, pinch: true },
-                    width: container.clientWidth,
-                    height: container.clientHeight,
-                });
+                    hovermode: 'x unified',
+                    showlegend: false,
+                    dragmode: 'zoom',
+                    modebar: {
+                        bgcolor: 'rgba(13, 19, 27, 0.8)',
+                        color: '#b2c9e0',
+                        activecolor: '#6b8bb0'
+                    }
+                };
 
-                candlestickSeries = chart.addCandlestickSeries({
-                    upColor: '#26a69a',
-                    downColor: '#ef5350',
-                    borderUpColor: '#26a69a',
-                    borderDownColor: '#ef5350',
-                    wickUpColor: '#26a69a',
-                    wickDownColor: '#ef5350',
-                });
+                const config = {
+                    responsive: true,
+                    displayModeBar: true,
+                    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+                    displaylogo: false
+                };
 
-                const chartData = displayData.map(d => ({
-                    time: d.time,
-                    open: d.open,
-                    high: d.high,
-                    low: d.low,
-                    close: d.close,
-                }));
-                candlestickSeries.setData(chartData);
+                // Render the chart
+                Plotly.newPlot(container, [trace], layout, config);
 
+                // Update info
                 candleCountEl.textContent = displayData.length;
                 if (displayData.length > 0) {
-                    const first = new Date(displayData[0].time * 1000);
-                    const last = new Date(displayData[displayData.length - 1].time * 1000);
+                    const first = displayData[0].date;
+                    const last = displayData[displayData.length - 1].date;
                     dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
                 }
-
-                chart.timeScale().fitContent();
-
-                const resizeObserver = new ResizeObserver(() => {
-                    if (chart) {
-                        chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-                    }
-                });
-                resizeObserver.observe(container);
 
                 loadStatusEl.textContent = '✅ ready';
                 loadStatusEl.style.color = '#8fb0d0';
@@ -539,6 +526,13 @@
 
                 if (ohlcData && ohlcData.length > 0) {
                     renderChart(ohlcData, rangeKey);
+                }
+            }
+
+            // ---------- handle resize ----------
+            function handleResize() {
+                if (container && container.clientWidth > 0) {
+                    Plotly.Plots.resize(container);
                 }
             }
 
@@ -564,11 +558,7 @@
             let resizeTimer;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => {
-                    if (chart) {
-                        chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-                    }
-                }, 80);
+                resizeTimer = setTimeout(handleResize, 200);
             });
 
             init();
