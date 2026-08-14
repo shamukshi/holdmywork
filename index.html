@@ -202,7 +202,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Take care of my work while I go do something else.
+            Takkkke care of my work while I go do something else.
         </div>
     </header>
 
@@ -418,31 +418,26 @@
                     console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
                 }
 
-                // Prepare data for Plotly - using numeric index instead of dates to remove gaps
-                const index = displayData.map((_, i) => i);
-                const dates = displayData.map(d => d.date);
-                const openPrices = displayData.map(d => d.open);
-                const highPrices = displayData.map(d => d.high);
-                const lowPrices = displayData.map(d => d.low);
-                const closePrices = displayData.map(d => d.close);
-
-                // Create custom tick labels with date and time
-                const tickLabels = dates.map(d => {
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const hours = String(d.getHours()).padStart(2, '0');
-                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                // Create string labels in the format "MM/DD HH:MM"
+                const labels = displayData.map(d => {
+                    const month = String(d.date.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.date.getDate()).padStart(2, '0');
+                    const hours = String(d.date.getHours()).padStart(2, '0');
+                    const minutes = String(d.date.getMinutes()).padStart(2, '0');
                     return `${month}/${day} ${hours}:${minutes}`;
                 });
 
-                // Create candlestick trace using numeric x values
+                // Use numeric indices for x-axis
+                const indices = displayData.map((_, i) => i);
+
+                // Create candlestick trace using string labels
                 const trace = {
                     type: 'candlestick',
-                    x: index,
-                    open: openPrices,
-                    high: highPrices,
-                    low: lowPrices,
-                    close: closePrices,
+                    x: indices,
+                    open: displayData.map(d => d.open),
+                    high: displayData.map(d => d.high),
+                    low: displayData.map(d => d.low),
+                    close: displayData.map(d => d.close),
                     increasing: {
                         line: { color: '#26a69a' },
                         fillcolor: '#26a69a'
@@ -452,13 +447,18 @@
                         fillcolor: '#ef5350'
                     },
                     name: 'OHLC',
-                    hovertext: tickLabels,
-                    hovertemplate: '<b>%{hovertext}</b><br>' +
+                    text: labels,
+                    hovertemplate: '<b>%{text}</b><br>' +
                         'Open: %{open:.4f}<br>' +
                         'High: %{high:.4f}<br>' +
                         'Low: %{low:.4f}<br>' +
                         'Close: %{close:.4f}<extra></extra>'
                 };
+
+                // Filter labels to show every Nth (to avoid crowding)
+                const step = Math.max(1, Math.floor(labels.length / 20));
+                const filteredIndices = indices.filter((_, i) => i % step === 0);
+                const filteredLabels = labels.filter((_, i) => i % step === 0);
 
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -477,17 +477,18 @@
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
                         tickmode: 'array',
-                        tickvals: index,
-                        ticktext: tickLabels,
+                        tickvals: filteredIndices,
+                        ticktext: filteredLabels,
                         tickangle: -45,
                         showspikes: true,
                         spikemode: 'across',
                         spikethickness: 1,
                         spikecolor: '#4d6a89',
-                        // Show only every Nth label to avoid crowding
                         tickfont: {
                             size: 10
-                        }
+                        },
+                        // Fix: Force the axis to show all data without gaps
+                        range: [-0.5, indices.length - 0.5]
                     },
                     yaxis: {
                         title: {
