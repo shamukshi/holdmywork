@@ -202,7 +202,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Takkke care of my work while I go do something else.
+            Take care of my work while I go do something else.
         </div>
     </header>
 
@@ -238,7 +238,6 @@
 
             let ohlcData = [];
             let currentRange = '15m';
-            let plotlyChart = null;
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -419,17 +418,27 @@
                     console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
                 }
 
-                // Prepare data for Plotly
+                // Prepare data for Plotly - using numeric index instead of dates to remove gaps
+                const index = displayData.map((_, i) => i);
                 const dates = displayData.map(d => d.date);
                 const openPrices = displayData.map(d => d.open);
                 const highPrices = displayData.map(d => d.high);
                 const lowPrices = displayData.map(d => d.low);
                 const closePrices = displayData.map(d => d.close);
 
-                // Create candlestick trace
+                // Create custom tick labels with date and time
+                const tickLabels = dates.map(d => {
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                    return `${month}/${day} ${hours}:${minutes}`;
+                });
+
+                // Create candlestick trace using numeric x values
                 const trace = {
                     type: 'candlestick',
-                    x: dates,
+                    x: index,
                     open: openPrices,
                     high: highPrices,
                     low: lowPrices,
@@ -442,7 +451,13 @@
                         line: { color: '#ef5350' },
                         fillcolor: '#ef5350'
                     },
-                    name: 'OHLC'
+                    name: 'OHLC',
+                    hovertext: tickLabels,
+                    hovertemplate: '<b>%{hovertext}</b><br>' +
+                        'Open: %{open:.4f}<br>' +
+                        'High: %{high:.4f}<br>' +
+                        'Low: %{low:.4f}<br>' +
+                        'Close: %{close:.4f}<extra></extra>'
                 };
 
                 const layout = {
@@ -454,14 +469,25 @@
                     },
                     xaxis: {
                         title: {
-                            text: 'Date',
+                            text: 'Date/Time',
                             font: { color: '#b2c9e0' }
                         },
                         gridcolor: '#1f2b36',
                         zerolinecolor: '#1f2b36',
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
-                        type: 'date'
+                        tickmode: 'array',
+                        tickvals: index,
+                        ticktext: tickLabels,
+                        tickangle: -45,
+                        showspikes: true,
+                        spikemode: 'across',
+                        spikethickness: 1,
+                        spikecolor: '#4d6a89',
+                        // Show only every Nth label to avoid crowding
+                        tickfont: {
+                            size: 10
+                        }
                     },
                     yaxis: {
                         title: {
@@ -477,7 +503,7 @@
                         l: 60,
                         r: 20,
                         t: 20,
-                        b: 40
+                        b: 80
                     },
                     hovermode: 'x unified',
                     showlegend: false,
@@ -566,3 +592,4 @@
     </script>
 </body>
 </html>
+
