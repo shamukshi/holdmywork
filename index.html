@@ -7,8 +7,6 @@
     <!-- Plotly CDN -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js">
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-    </script>
     <style>
         * {
             margin: 0;
@@ -255,7 +253,7 @@
                 return { dateCol, openCol, highCol, lowCol, closeCol };
             }
 
-            function parseExcelDate(val) {
+            function parseCSVDate(val) {
                 if (typeof val === 'number') {
                     const epoch = new Date(1899, 11, 30);
                     return new Date(epoch.getTime() + val * 86400000);
@@ -323,33 +321,27 @@
                 }
             }
 
-            // ---------- load Excel ----------
-            async function loadExcel() {
+            // ---------- load CSV ----------
+            async function loadCSV() {
                 try {
                     loadStatusEl.textContent = '⏳ reading…';
                     
-                    const response = await fetch('data/ohlc.xlsx');
+                    const response = await fetch('data/ohlc.csv');
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
+                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.csv`);
                     }
                     
-                    const arrayBuffer = await response.arrayBuffer();
-                    const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
+                    const csvText = await response.text();
                     
-                    let sheetName = 'tab_1';
-                    if (!workbook.SheetNames.includes(sheetName)) {
-                        sheetName = workbook.SheetNames[0];
-                    }
-                    
-                    const firstSheet = workbook.Sheets[sheetName];
-                    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
-
-                    if (!rows || rows.length === 0) {
-                        throw new Error('No data rows found in sheet: ' + sheetName);
+                    // Parse CSV manually to handle various formats
+                    const lines = csvText.split('\n').filter(line => line.trim() !== '');
+                    if (lines.length === 0) {
+                        throw new Error('CSV file is empty');
                     }
 
-                    const headers = Object.keys(rows[0]);
+                    // Parse headers
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
                     const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
 
                     if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
@@ -358,23 +350,37 @@
                         );
                     }
 
+                    // Parse data rows
                     const parsed = [];
-                    for (const row of rows) {
-                        const rawDate = row[dateCol];
-                        const open = parseFloat(row[openCol]);
-                        const high = parseFloat(row[highCol]);
-                        const low = parseFloat(row[lowCol]);
-                        const close = parseFloat(row[closeCol]);
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                        
+                        // Find column indices
+                        const dateIdx = headers.indexOf(dateCol);
+                        const openIdx = headers.indexOf(openCol);
+                        const highIdx = headers.indexOf(highCol);
+                        const lowIdx = headers.indexOf(lowCol);
+                        const closeIdx = headers.indexOf(closeCol);
+
+                        if (dateIdx === -1 || openIdx === -1 || highIdx === -1 || lowIdx === -1 || closeIdx === -1) {
+                            continue;
+                        }
+
+                        const rawDate = values[dateIdx];
+                        const open = parseFloat(values[openIdx]);
+                        const high = parseFloat(values[highIdx]);
+                        const low = parseFloat(values[lowIdx]);
+                        const close = parseFloat(values[closeIdx]);
 
                         if (rawDate === undefined || rawDate === null || rawDate === '') continue;
                         if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
 
-                        const dateObj = parseExcelDate(rawDate);
+                        const dateObj = parseCSVDate(rawDate);
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
 
                         const timeSec = Math.floor(dateObj.getTime() / 1000);
-                        if (timeSec === null) continue;
 
+                        // Skip duplicates
                         const exists = parsed.some(d => d.time === timeSec);
                         if (exists) continue;
 
@@ -396,7 +402,7 @@
                     ohlcData = parsed;
                     return parsed;
                 } catch (err) {
-                    console.error('Excel load error:', err);
+                    console.error('CSV load error:', err);
                     loadStatusEl.textContent = `⚠️ ${err.message}`;
                     loadStatusEl.style.color = '#e6b88a';
                     return null;
@@ -484,7 +490,6 @@
                         spikemode: 'across',
                         spikethickness: 1,
                         spikecolor: '#4d6a89',
-                        // Show only every Nth label to avoid crowding
                         tickfont: {
                             size: 10
                         }
@@ -572,7 +577,7 @@
                     });
                 });
 
-                const data = await loadExcel();
+                const data = await loadCSV();
                 if (data && data.length > 0) {
                     renderChart(data, '15m');
                 } else {
@@ -592,4 +597,3 @@
     </script>
 </body>
 </html>
-
