@@ -83,45 +83,11 @@
             flex-shrink: 0;
         }
 
-        .time-buttons {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-
-        .time-buttons button {
-            background: transparent;
-            border: 1px solid #2d3a48;
-            color: #b6c9e0;
-            font-size: 0.7rem;
-            font-weight: 500;
-            padding: 4px 12px;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: 0.2s;
-            letter-spacing: 0.3px;
-            background: #141c26;
-        }
-
-        .time-buttons button:hover {
-            background: #25313f;
-            border-color: #5b748f;
-            color: #f0f7ff;
-        }
-
-        .time-buttons button.active {
-            background: #2b3d52;
-            border-color: #6b8bb0;
-            color: #ffffff;
-            box-shadow: 0 0 6px rgba(70, 130, 200, 0.2);
-        }
-
         .info-badge {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             gap: 8px 18px;
-            margin-left: auto;
             font-size: 0.75rem;
             color: #8499b3;
             background: #121b24;
@@ -175,10 +141,6 @@
                 font-size: 0.65rem;
                 padding: 2px 10px;
             }
-            .time-buttons button {
-                font-size: 0.6rem;
-                padding: 2px 10px;
-            }
         }
 
         ::-webkit-scrollbar {
@@ -202,19 +164,11 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Take care of my work while I go do something else.
+            Takkkeee care of my work while I go do something else.
         </div>
     </header>
 
     <div class="chart-controls">
-        <div class="time-buttons" id="timeButtons">
-            <button data-range="15m" class="active">15m</button>
-            <button data-range="1h">1h</button>
-            <button data-range="1d">1d</button>
-            <button data-range="1w">1w</button>
-            <button data-range="1m">1m</button>
-            <button data-range="1y">1y</button>
-        </div>
         <div class="info-badge" id="infoBadge">
             <span>📄 <span class="num" id="candleCount">—</span> candles</span>
             <span>📅 <span id="dateRange">—</span></span>
@@ -234,10 +188,8 @@
             const candleCountEl = document.getElementById('candleCount');
             const dateRangeEl = document.getElementById('dateRange');
             const loadStatusEl = document.getElementById('loadStatus');
-            const timeButtons = document.querySelectorAll('#timeButtons button');
 
             let ohlcData = [];
-            let currentRange = '15m';
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -268,59 +220,6 @@
                     if (!isNaN(ms)) return new Date(ms);
                 }
                 return null;
-            }
-
-            // ---------- aggregation ----------
-            function aggregateCandles(data, intervalSeconds) {
-                if (!data || data.length === 0) return [];
-                if (intervalSeconds <= 0) return data.slice();
-
-                const buckets = new Map();
-                for (const d of data) {
-                    const bucketTime = Math.floor(d.time / intervalSeconds) * intervalSeconds;
-                    
-                    if (!buckets.has(bucketTime)) {
-                        buckets.set(bucketTime, {
-                            time: bucketTime,
-                            open: d.open,
-                            high: d.high,
-                            low: d.low,
-                            close: d.close,
-                            count: 1,
-                            date: new Date(bucketTime * 1000)
-                        });
-                    } else {
-                        const b = buckets.get(bucketTime);
-                        b.high = Math.max(b.high, d.high);
-                        b.low = Math.min(b.low, d.low);
-                        b.close = d.close;
-                        b.count += 1;
-                    }
-                }
-
-                const result = Array.from(buckets.values());
-                result.sort((a, b) => a.time - b.time);
-                return result;
-            }
-
-            // ---------- get interval for aggregation ----------
-            function getAggregationInterval(rangeKey) {
-                switch (rangeKey) {
-                    case '15m':
-                        return 0;
-                    case '1h':
-                        return 3600;
-                    case '1d':
-                        return 86400;
-                    case '1w':
-                        return 604800;
-                    case '1m':
-                        return 2592000;
-                    case '1y':
-                        return 31536000;
-                    default:
-                        return 0;
-                }
             }
 
             // ---------- load Excel ----------
@@ -404,45 +303,46 @@
             }
 
             // ---------- render chart with Plotly ----------
-            function renderChart(data, rangeKey) {
+            function renderChart(data) {
                 if (!data || data.length === 0) {
                     loadStatusEl.textContent = '⚠️ no data';
                     return;
                 }
 
-                // Aggregate data based on the selected range
-                let displayData = data;
-                const interval = getAggregationInterval(rangeKey);
-                if (interval > 0) {
-                    displayData = aggregateCandles(data, interval);
-                    console.log(`Aggregated ${data.length} candles to ${displayData.length} candles (${rangeKey})`);
-                }
+                console.log('Rendering', data.length, 'hourly candles');
 
-                // Prepare data for Plotly - using numeric index instead of dates to remove gaps
-                const index = displayData.map((_, i) => i);
-                const dates = displayData.map(d => d.date);
-                const openPrices = displayData.map(d => d.open);
-                const highPrices = displayData.map(d => d.high);
-                const lowPrices = displayData.map(d => d.low);
-                const closePrices = displayData.map(d => d.close);
-
-                // Create custom tick labels with date and time
-                const tickLabels = dates.map(d => {
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const hours = String(d.getHours()).padStart(2, '0');
-                    const minutes = String(d.getMinutes()).padStart(2, '0');
-                    return `${month}/${day} ${hours}:${minutes}`;
+                // Create time labels (HH:MM)
+                const timeLabels = data.map(d => {
+                    const hours = String(d.date.getHours()).padStart(2, '0');
+                    const minutes = String(d.date.getMinutes()).padStart(2, '0');
+                    return `${hours}:${minutes}`;
                 });
 
-                // Create candlestick trace using numeric x values
+                // Create date labels for the secondary x-axis (only show unique dates)
+                const dateLabels = [];
+                const datePositions = [];
+                let currentDate = '';
+                for (let i = 0; i < data.length; i++) {
+                    const d = data[i].date;
+                    const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                    if (dateStr !== currentDate) {
+                        currentDate = dateStr;
+                        dateLabels.push(dateStr);
+                        datePositions.push(i);
+                    }
+                }
+
+                // Use numeric indices for x-axis
+                const indices = data.map((_, i) => i);
+
+                // Create candlestick trace
                 const trace = {
                     type: 'candlestick',
-                    x: index,
-                    open: openPrices,
-                    high: highPrices,
-                    low: lowPrices,
-                    close: closePrices,
+                    x: indices,
+                    open: data.map(d => d.open),
+                    high: data.map(d => d.high),
+                    low: data.map(d => d.low),
+                    close: data.map(d => d.close),
                     increasing: {
                         line: { color: '#26a69a' },
                         fillcolor: '#26a69a'
@@ -452,13 +352,18 @@
                         fillcolor: '#ef5350'
                     },
                     name: 'OHLC',
-                    hovertext: tickLabels,
-                    hovertemplate: '<b>%{hovertext}</b><br>' +
+                    text: timeLabels,
+                    hovertemplate: '<b>%{text}</b><br>' +
                         'Open: %{open:.4f}<br>' +
                         'High: %{high:.4f}<br>' +
                         'Low: %{low:.4f}<br>' +
                         'Close: %{close:.4f}<extra></extra>'
                 };
+
+                // Filter time labels to show every Nth (to avoid crowding)
+                const step = Math.max(1, Math.floor(timeLabels.length / 15));
+                const filteredIndices = indices.filter((_, i) => i % step === 0);
+                const filteredTimeLabels = timeLabels.filter((_, i) => i % step === 0);
 
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -469,7 +374,7 @@
                     },
                     xaxis: {
                         title: {
-                            text: 'Date/Time',
+                            text: 'Time (Hourly)',
                             font: { color: '#b2c9e0' }
                         },
                         gridcolor: '#1f2b36',
@@ -477,17 +382,40 @@
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
                         tickmode: 'array',
-                        tickvals: index,
-                        ticktext: tickLabels,
+                        tickvals: filteredIndices,
+                        ticktext: filteredTimeLabels,
                         tickangle: -45,
                         showspikes: true,
                         spikemode: 'across',
                         spikethickness: 1,
                         spikecolor: '#4d6a89',
-                        // Show only every Nth label to avoid crowding
                         tickfont: {
                             size: 10
-                        }
+                        },
+                        range: [-0.5, indices.length - 0.5]
+                    },
+                    // Secondary x-axis for dates (below the main x-axis)
+                    xaxis2: {
+                        title: {
+                            text: 'Date',
+                            font: { color: '#8499b3', size: 11 }
+                        },
+                        overlaying: 'x',
+                        side: 'bottom',
+                        tickmode: 'array',
+                        tickvals: datePositions,
+                        ticktext: dateLabels,
+                        tickfont: {
+                            color: '#8499b3',
+                            size: 11
+                        },
+                        showgrid: false,
+                        zeroline: false,
+                        anchor: 'y',
+                        domain: [0, 1],
+                        position: 0,
+                        tickangle: 0,
+                        automargin: true
                     },
                     yaxis: {
                         title: {
@@ -526,10 +454,10 @@
                 Plotly.newPlot(container, [trace], layout, config);
 
                 // Update info
-                candleCountEl.textContent = displayData.length;
-                if (displayData.length > 0) {
-                    const first = displayData[0].date;
-                    const last = displayData[displayData.length - 1].date;
+                candleCountEl.textContent = data.length;
+                if (data.length > 0) {
+                    const first = data[0].date;
+                    const last = data[data.length - 1].date;
                     dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
                 }
 
@@ -541,20 +469,6 @@
                 return date.toISOString().slice(0, 10);
             }
 
-            // ---------- change time frame ----------
-            function changeTimeFrame(rangeKey) {
-                currentRange = rangeKey;
-                
-                // Update active button
-                timeButtons.forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.range === rangeKey);
-                });
-
-                if (ohlcData && ohlcData.length > 0) {
-                    renderChart(ohlcData, rangeKey);
-                }
-            }
-
             // ---------- handle resize ----------
             function handleResize() {
                 if (container && container.clientWidth > 0) {
@@ -564,17 +478,9 @@
 
             // ---------- init ----------
             async function init() {
-                // Set up button listeners
-                timeButtons.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const range = btn.dataset.range;
-                        changeTimeFrame(range);
-                    });
-                });
-
                 const data = await loadExcel();
                 if (data && data.length > 0) {
-                    renderChart(data, '15m');
+                    renderChart(data);
                 } else {
                     loadStatusEl.textContent = '⚠️ no data loaded';
                     loadStatusEl.style.color = '#e6b88a';
@@ -592,4 +498,3 @@
     </script>
 </body>
 </html>
-
