@@ -206,12 +206,7 @@
 
     <div class="chart-controls">
         <div class="time-buttons" id="timeButtons">
-            <button data-range="15m" class="active">15m</button>
-            <button data-range="1h">1h</button>
-            <button data-range="1d">1d</button>
-            <button data-range="1w">1w</button>
-            <button data-range="1m">1m</button>
-            <button data-range="1y">1y</button>
+            <button data-range="1h" class="active">1h</button>
         </div>
         <div class="info-badge" id="infoBadge">
             <span>📄 <span class="num" id="candleCount">—</span> candles</span>
@@ -235,7 +230,7 @@
             const timeButtons = document.querySelectorAll('#timeButtons button');
 
             let ohlcData = [];
-            let currentRange = '15m';
+            let currentRange = '1h';
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -304,20 +299,10 @@
             // ---------- get interval for aggregation ----------
             function getAggregationInterval(rangeKey) {
                 switch (rangeKey) {
-                    case '15m':
-                        return 0;
                     case '1h':
                         return 3600;
-                    case '1d':
-                        return 86400;
-                    case '1w':
-                        return 604800;
-                    case '1m':
-                        return 2592000;
-                    case '1y':
-                        return 31536000;
                     default:
-                        return 0;
+                        return 3600;
                 }
             }
 
@@ -579,7 +564,7 @@
 
                 const data = await loadCSV();
                 if (data && data.length > 0) {
-                    renderChart(data, '15m');
+                    renderChart(data, '1h');
                 } else {
                     loadStatusEl.textContent = '⚠️ no data loaded';
                     loadStatusEl.style.color = '#e6b88a';
