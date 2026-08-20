@@ -7,6 +7,8 @@
     <!-- Plotly CDN -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js">
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    </script>
     <style>
         * {
             margin: 0;
@@ -200,13 +202,18 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            Takeeee care of my work while I go do something else.
+            Taken care of my work while I go do something else.
         </div>
     </header>
 
     <div class="chart-controls">
         <div class="time-buttons" id="timeButtons">
-            <button data-range="1h" class="active">1h</button>
+            <button data-range="15m" class="active">15m</button>
+            <button data-range="1h">1h</button>
+            <button data-range="1d">1d</button>
+            <button data-range="1w">1w</button>
+            <button data-range="1m">1m</button>
+            <button data-range="1y">1y</button>
         </div>
         <div class="info-badge" id="infoBadge">
             <span>📄 <span class="num" id="candleCount">—</span> candles</span>
@@ -230,7 +237,7 @@
             const timeButtons = document.querySelectorAll('#timeButtons button');
 
             let ohlcData = [];
-            let currentRange = '1h';
+            let currentRange = '15m';
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -248,7 +255,7 @@
                 return { dateCol, openCol, highCol, lowCol, closeCol };
             }
 
-            function parseCSVDate(val) {
+            function parseExcelDate(val) {
                 if (typeof val === 'number') {
                     const epoch = new Date(1899, 11, 30);
                     return new Date(epoch.getTime() + val * 86400000);
@@ -299,34 +306,50 @@
             // ---------- get interval for aggregation ----------
             function getAggregationInterval(rangeKey) {
                 switch (rangeKey) {
+                    case '15m':
+                        return 0;
                     case '1h':
                         return 3600;
+                    case '1d':
+                        return 86400;
+                    case '1w':
+                        return 604800;
+                    case '1m':
+                        return 2592000;
+                    case '1y':
+                        return 31536000;
                     default:
-                        return 3600;
+                        return 0;
                 }
             }
 
-            // ---------- load CSV ----------
-            async function loadCSV() {
+            // ---------- load Excel ----------
+            async function loadExcel() {
                 try {
                     loadStatusEl.textContent = '⏳ reading…';
                     
-                    const response = await fetch('data/ohlc.csv');
+                    const response = await fetch('data/ohlc.xlsx');
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.csv`);
+                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
                     }
                     
-                    const csvText = await response.text();
+                    const arrayBuffer = await response.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
                     
-                    // Parse CSV manually to handle various formats
-                    const lines = csvText.split('\n').filter(line => line.trim() !== '');
-                    if (lines.length === 0) {
-                        throw new Error('CSV file is empty');
+                    let sheetName = 'tab_1';
+                    if (!workbook.SheetNames.includes(sheetName)) {
+                        sheetName = workbook.SheetNames[0];
+                    }
+                    
+                    const firstSheet = workbook.Sheets[sheetName];
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
+
+                    if (!rows || rows.length === 0) {
+                        throw new Error('No data rows found in sheet: ' + sheetName);
                     }
 
-                    // Parse headers
-                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                    const headers = Object.keys(rows[0]);
                     const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
 
                     if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
@@ -335,37 +358,23 @@
                         );
                     }
 
-                    // Parse data rows
                     const parsed = [];
-                    for (let i = 1; i < lines.length; i++) {
-                        const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-                        
-                        // Find column indices
-                        const dateIdx = headers.indexOf(dateCol);
-                        const openIdx = headers.indexOf(openCol);
-                        const highIdx = headers.indexOf(highCol);
-                        const lowIdx = headers.indexOf(lowCol);
-                        const closeIdx = headers.indexOf(closeCol);
-
-                        if (dateIdx === -1 || openIdx === -1 || highIdx === -1 || lowIdx === -1 || closeIdx === -1) {
-                            continue;
-                        }
-
-                        const rawDate = values[dateIdx];
-                        const open = parseFloat(values[openIdx]);
-                        const high = parseFloat(values[highIdx]);
-                        const low = parseFloat(values[lowIdx]);
-                        const close = parseFloat(values[closeIdx]);
+                    for (const row of rows) {
+                        const rawDate = row[dateCol];
+                        const open = parseFloat(row[openCol]);
+                        const high = parseFloat(row[highCol]);
+                        const low = parseFloat(row[lowCol]);
+                        const close = parseFloat(row[closeCol]);
 
                         if (rawDate === undefined || rawDate === null || rawDate === '') continue;
                         if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
 
-                        const dateObj = parseCSVDate(rawDate);
+                        const dateObj = parseExcelDate(rawDate);
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
 
                         const timeSec = Math.floor(dateObj.getTime() / 1000);
+                        if (timeSec === null) continue;
 
-                        // Skip duplicates
                         const exists = parsed.some(d => d.time === timeSec);
                         if (exists) continue;
 
@@ -387,7 +396,7 @@
                     ohlcData = parsed;
                     return parsed;
                 } catch (err) {
-                    console.error('CSV load error:', err);
+                    console.error('Excel load error:', err);
                     loadStatusEl.textContent = `⚠️ ${err.message}`;
                     loadStatusEl.style.color = '#e6b88a';
                     return null;
@@ -475,6 +484,7 @@
                         spikemode: 'across',
                         spikethickness: 1,
                         spikecolor: '#4d6a89',
+                        // Show only every Nth label to avoid crowding
                         tickfont: {
                             size: 10
                         }
@@ -562,9 +572,9 @@
                     });
                 });
 
-                const data = await loadCSV();
+                const data = await loadExcel();
                 if (data && data.length > 0) {
-                    renderChart(data, '1h');
+                    renderChart(data, '15m');
                 } else {
                     loadStatusEl.textContent = '⚠️ no data loaded';
                     loadStatusEl.style.color = '#e6b88a';
@@ -582,3 +592,4 @@
     </script>
 </body>
 </html>
+
