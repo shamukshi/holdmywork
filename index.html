@@ -311,24 +311,33 @@
 
                 console.log('Rendering', data.length, 'hourly candles');
 
-                // Create time labels (HH:MM)
-                const timeLabels = data.map(d => {
-                    const hours = String(d.date.getHours()).padStart(2, '0');
-                    const minutes = String(d.date.getMinutes()).padStart(2, '0');
-                    return `${hours}:${minutes}`;
+                // ---------- prepare hover text: show full date + time ----------
+                const hoverTexts = data.map(d => {
+                    const dateStr = d.date.toLocaleDateString('en-US', { 
+                        month: 'short', day: 'numeric', year: 'numeric' 
+                    });
+                    const timeStr = d.date.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', minute: '2-digit', hour12: false 
+                    });
+                    return `${dateStr} ${timeStr}`;
                 });
 
-                // Create date labels for the secondary x-axis (only show unique dates)
-                const dateLabels = [];
-                const datePositions = [];
-                let currentDate = '';
+                // ---------- x-axis: show date labels like "Aug 1/26", "Aug 2/26", etc. ----------
+                // we want to show a date label for each unique date
+                const dateTickVals = [];
+                const dateTickTexts = [];
+                let currentDateKey = '';
                 for (let i = 0; i < data.length; i++) {
                     const d = data[i].date;
-                    const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
-                    if (dateStr !== currentDate) {
-                        currentDate = dateStr;
-                        dateLabels.push(dateStr);
-                        datePositions.push(i);
+                    const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                    if (dateKey !== currentDateKey) {
+                        currentDateKey = dateKey;
+                        dateTickVals.push(i);
+                        // format like "Aug 1/26"  (month short + day + '/' + last two digits of year)
+                        const month = d.toLocaleString('en-US', { month: 'short' });
+                        const day = d.getDate();
+                        const yearShort = String(d.getFullYear()).slice(-2);
+                        dateTickTexts.push(`${month} ${day}/${yearShort}`);
                     }
                 }
 
@@ -352,18 +361,13 @@
                         fillcolor: '#ef5350'
                     },
                     name: 'OHLC',
-                    text: timeLabels,
+                    text: hoverTexts,    // full date+time on hover
                     hovertemplate: '<b>%{text}</b><br>' +
                         'Open: %{open:.4f}<br>' +
                         'High: %{high:.4f}<br>' +
                         'Low: %{low:.4f}<br>' +
                         'Close: %{close:.4f}<extra></extra>'
                 };
-
-                // Filter time labels to show every Nth (to avoid crowding)
-                const step = Math.max(1, Math.floor(timeLabels.length / 15));
-                const filteredIndices = indices.filter((_, i) => i % step === 0);
-                const filteredTimeLabels = timeLabels.filter((_, i) => i % step === 0);
 
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -374,7 +378,7 @@
                     },
                     xaxis: {
                         title: {
-                            text: 'Time (Hourly)',
+                            text: 'Date',
                             font: { color: '#b2c9e0' }
                         },
                         gridcolor: '#1f2b36',
@@ -382,8 +386,8 @@
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
                         tickmode: 'array',
-                        tickvals: filteredIndices,
-                        ticktext: filteredTimeLabels,
+                        tickvals: dateTickVals,
+                        ticktext: dateTickTexts,
                         tickangle: -45,
                         showspikes: true,
                         spikemode: 'across',
@@ -393,29 +397,6 @@
                             size: 10
                         },
                         range: [-0.5, indices.length - 0.5]
-                    },
-                    // Secondary x-axis for dates (below the main x-axis)
-                    xaxis2: {
-                        title: {
-                            text: 'Date',
-                            font: { color: '#8499b3', size: 11 }
-                        },
-                        overlaying: 'x',
-                        side: 'bottom',
-                        tickmode: 'array',
-                        tickvals: datePositions,
-                        ticktext: dateLabels,
-                        tickfont: {
-                            color: '#8499b3',
-                            size: 11
-                        },
-                        showgrid: false,
-                        zeroline: false,
-                        anchor: 'y',
-                        domain: [0, 1],
-                        position: 0,
-                        tickangle: 0,
-                        automargin: true
                     },
                     yaxis: {
                         title: {
