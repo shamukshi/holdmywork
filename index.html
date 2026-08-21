@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>HoldMyWork · OHLC + Tools</title>
-    <!-- Plotly CDN -->
+    <title>HoldMyWork · Pattern Matcher (BB)</title>
+    <!-- Plotly & XLSX -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
@@ -15,18 +15,16 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             background: #0b0f14;
             color: #d1d9e6;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             height: 100vh;
             display: flex;
             flex-direction: column;
             padding: 16px 20px 20px 20px;
             overflow: hidden;
         }
-
         .app-header {
             display: flex;
             align-items: baseline;
@@ -36,13 +34,11 @@
             margin-bottom: 12px;
             flex-shrink: 0;
         }
-
         .brand {
             display: flex;
             align-items: baseline;
             gap: 6px;
         }
-
         .brand h1 {
             font-weight: 500;
             font-size: 1.6rem;
@@ -53,16 +49,13 @@
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
         .brand small {
             font-size: 0.9rem;
             font-weight: 300;
             color: #8b9bb5;
             margin-left: 4px;
-            letter-spacing: 0.2px;
             -webkit-text-fill-color: #8b9bb5;
         }
-
         .sub-message {
             font-size: 0.95rem;
             color: #a2b7d0;
@@ -73,7 +66,6 @@
             backdrop-filter: blur(2px);
             white-space: nowrap;
         }
-
         .chart-controls {
             display: flex;
             flex-wrap: wrap;
@@ -82,7 +74,6 @@
             margin-bottom: 12px;
             flex-shrink: 0;
         }
-
         .info-badge {
             display: flex;
             flex-wrap: wrap;
@@ -95,18 +86,15 @@
             border-radius: 40px;
             border: 1px solid #25323f;
         }
-
         .info-badge span {
             display: inline-flex;
             align-items: center;
             gap: 4px;
         }
-
         .info-badge .num {
             color: #d6e5f8;
             font-weight: 500;
         }
-
         .tools-group {
             display: flex;
             gap: 4px;
@@ -117,7 +105,6 @@
             border: 1px solid #25323f;
             flex-wrap: wrap;
         }
-
         .tool-btn {
             background: transparent;
             border: none;
@@ -158,7 +145,6 @@
             background: #2a3a4a;
             margin: 0 2px;
         }
-
         .chart-wrapper {
             flex: 1 1 auto;
             min-height: 0;
@@ -170,14 +156,12 @@
             position: relative;
             transition: all 0.1s;
         }
-
         #chart-container {
             width: 100%;
             height: 100%;
             border-radius: 14px;
             background: #0d131b;
         }
-
         .zoom-hint {
             position: absolute;
             bottom: 20px;
@@ -200,8 +184,6 @@
         .zoom-hint.show {
             opacity: 1;
         }
-
-        /* Refresh button specific style */
         .refresh-btn {
             background: #1e2a36;
             border: 1px solid #3a5068;
@@ -232,7 +214,31 @@
             stroke-linecap: round;
             stroke-linejoin: round;
         }
-
+        .find-btn {
+            background: #1e4a5e;
+            border: 1px solid #3a7a9a;
+            color: #e8f4ff;
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .find-btn:hover {
+            background: #2a6a8a;
+            border-color: #5a9aba;
+            color: white;
+        }
+        .find-btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
         @media (max-width: 700px) {
             body {
                 padding: 10px 12px 12px 12px;
@@ -256,16 +262,17 @@
                 width: 14px;
                 height: 14px;
             }
-            .refresh-btn {
+            .refresh-btn,
+            .find-btn {
                 font-size: 0.65rem;
                 padding: 3px 8px;
             }
-            .refresh-btn svg {
+            .refresh-btn svg,
+            .find-btn svg {
                 width: 14px;
                 height: 14px;
             }
         }
-
         ::-webkit-scrollbar {
             width: 4px;
             height: 4px;
@@ -277,6 +284,15 @@
             background: #3a5068;
             border-radius: 12px;
         }
+        .bb-marker {
+            position: absolute;
+            border: 2px dashed #ffaa66;
+            background: rgba(255, 170, 102, 0.08);
+            pointer-events: none;
+            z-index: 10;
+            border-radius: 4px;
+            transition: all 0.1s;
+        }
     </style>
 </head>
 <body>
@@ -287,7 +303,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            kkk care of my work while I go do something else.
+         ttt care of my work while I go do something else.
         </div>
     </header>
 
@@ -300,65 +316,45 @@
 
         <div class="tools-group" id="toolsGroup">
             <!-- Pan -->
-            <button class="tool-btn" id="panBtn" title="Pan mode (click to toggle)">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l3 3 3-3M19 9l3 3-3 3M9 19l3 3 3-3M5 15l-3 3 3 3" />
-                    <circle cx="12" cy="12" r="2" />
-                </svg>
+            <button class="tool-btn" id="panBtn" title="Pan mode">
+                <svg viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l3 3 3-3M19 9l3 3-3 3M9 19l3 3 3-3M5 15l-3 3 3 3"/><circle cx="12" cy="12" r="2"/></svg>
                 <span>Pan</span>
             </button>
             <div class="tool-divider"></div>
 
-            <!-- Magnifying Glass (zoom box) -->
-            <button class="tool-btn" id="zoomBoxBtn" title="Draw a box to zoom in">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="16" y1="16" x2="22" y2="22" />
-                    <rect x="2" y="2" width="18" height="18" rx="2" stroke-dasharray="4 2" opacity="0.5" />
-                </svg>
-                <span>Zoom Box</span>
+            <!-- BB (Bounding Box) -->
+            <button class="tool-btn" id="bbBtn" title="Draw a BB (bounding box) over candles">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+                <span>BB</span>
             </button>
+            <div class="tool-divider"></div>
+
+            <!-- Find Trend (pattern match) -->
+            <button class="find-btn" id="findTrendBtn" disabled>🔍 Find Trend</button>
+
             <div class="tool-divider"></div>
 
             <!-- Reset to Home -->
             <button class="tool-btn" id="homeBtn" title="Reset to full view">
-                <svg viewBox="0 0 24 24">
-                    <path d="M3 12l9-9 9 9" />
-                    <path d="M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" />
-                    <rect x="10" y="14" width="4" height="4" rx="1" />
-                </svg>
+                <svg viewBox="0 0 24 24"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10"/><rect x="10" y="14" width="4" height="4" rx="1"/></svg>
                 <span>Home</span>
             </button>
             <div class="tool-divider"></div>
 
-            <!-- Zoom In -->
+            <!-- Zoom In/Out -->
             <button class="tool-btn" id="zoomInBtn" title="Zoom in">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="16" y1="16" x2="22" y2="22" />
-                    <line x1="11" y1="8" x2="11" y2="14" />
-                    <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
-                <span>Zoom In</span>
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16" y1="16" x2="22" y2="22"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                <span>+</span>
             </button>
-            <div class="tool-divider"></div>
-
-            <!-- Zoom Out -->
             <button class="tool-btn" id="zoomOutBtn" title="Zoom out">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="16" y1="16" x2="22" y2="22" />
-                    <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
-                <span>Zoom Out</span>
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16" y1="16" x2="22" y2="22"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                <span>−</span>
             </button>
             <div class="tool-divider"></div>
 
             <!-- Refresh -->
             <button class="refresh-btn" id="refreshBtn" title="Refresh everything">
-                <svg viewBox="0 0 24 24">
-                    <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9" />
-                </svg>
+                <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
                 <span>Refresh</span>
             </button>
         </div>
@@ -366,7 +362,7 @@
 
     <div class="chart-wrapper" id="chartWrapper">
         <div id="chart-container"></div>
-        <div class="zoom-hint" id="zoomHint">✧ Drag a rectangle to zoom in</div>
+        <div class="zoom-hint" id="zoomHint">✧ Draw a BB over candles, then click "Find Trend"</div>
     </div>
 
     <script>
@@ -377,32 +373,31 @@
             const candleCountEl = document.getElementById('candleCount');
             const dateRangeEl = document.getElementById('dateRange');
             const loadStatusEl = document.getElementById('loadStatus');
+            const zoomHint = document.getElementById('zoomHint');
 
-            // tool buttons
             const panBtn = document.getElementById('panBtn');
-            const zoomBoxBtn = document.getElementById('zoomBoxBtn');
+            const bbBtn = document.getElementById('bbBtn');
+            const findTrendBtn = document.getElementById('findTrendBtn');
             const homeBtn = document.getElementById('homeBtn');
             const zoomInBtn = document.getElementById('zoomInBtn');
             const zoomOutBtn = document.getElementById('zoomOutBtn');
             const refreshBtn = document.getElementById('refreshBtn');
-            const zoomHint = document.getElementById('zoomHint');
 
             let ohlcData = [];
-            let activeTool = null; // 'pan' | 'zoomBox' | null
+            let activeTool = 'pan'; // 'pan' | 'bb'
+            let bbSelection = null; // { x0, x1, y0, y1 } in data indices & price
 
             // ---------- column detection ----------
             function findColumns(headers) {
                 const lowerMap = {};
                 headers.forEach(h => { lowerMap[h.trim().toLowerCase()] = h; });
-
                 const dateCol = lowerMap['date'] || lowerMap['timestamp'] || lowerMap['time'] || lowerMap['datetime'] ||
-                    null;
+                null;
                 const openCol = lowerMap['open_norm'] || lowerMap['open'] || lowerMap['open price'] || null;
                 const highCol = lowerMap['high_norm'] || lowerMap['high'] || lowerMap['high price'] || null;
                 const lowCol = lowerMap['low_norm'] || lowerMap['low'] || lowerMap['low price'] || null;
                 const closeCol = lowerMap['close_norm'] || lowerMap['close'] || lowerMap['close price'] || lowerMap[
                     'last'] || null;
-
                 return { dateCol, openCol, highCol, lowCol, closeCol };
             }
 
@@ -425,37 +420,20 @@
             async function loadExcel() {
                 try {
                     loadStatusEl.textContent = '⏳ reading…';
-
                     const response = await fetch('data/ohlc.xlsx');
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
-                    }
-
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: Could not load data/ohlc.xlsx`);
                     const arrayBuffer = await response.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
-
                     let sheetName = 'tab_1';
-                    if (!workbook.SheetNames.includes(sheetName)) {
-                        sheetName = workbook.SheetNames[0];
-                    }
-
+                    if (!workbook.SheetNames.includes(sheetName)) sheetName = workbook.SheetNames[0];
                     const firstSheet = workbook.Sheets[sheetName];
                     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
-
-                    if (!rows || rows.length === 0) {
-                        throw new Error('No data rows found in sheet: ' + sheetName);
-                    }
-
+                    if (!rows || rows.length === 0) throw new Error('No data rows found in sheet: ' + sheetName);
                     const headers = Object.keys(rows[0]);
                     const { dateCol, openCol, highCol, lowCol, closeCol } = findColumns(headers);
-
                     if (!dateCol || !openCol || !highCol || !lowCol || !closeCol) {
-                        throw new Error(
-                            `Could not detect OHLC columns. Found: ${headers.join(', ')}`
-                        );
+                        throw new Error(`Could not detect OHLC columns. Found: ${headers.join(', ')}`);
                     }
-
                     const parsed = [];
                     for (const row of rows) {
                         const rawDate = row[dateCol];
@@ -463,19 +441,14 @@
                         const high = parseFloat(row[highCol]);
                         const low = parseFloat(row[lowCol]);
                         const close = parseFloat(row[closeCol]);
-
                         if (rawDate === undefined || rawDate === null || rawDate === '') continue;
                         if ([open, high, low, close].some(v => isNaN(v) || !isFinite(v))) continue;
-
                         const dateObj = parseExcelDate(rawDate);
                         if (!dateObj || isNaN(dateObj.getTime())) continue;
-
                         const timeSec = Math.floor(dateObj.getTime() / 1000);
                         if (timeSec === null) continue;
-
                         const exists = parsed.some(d => d.time === timeSec);
                         if (exists) continue;
-
                         parsed.push({
                             time: timeSec,
                             open: open,
@@ -485,11 +458,7 @@
                             date: dateObj
                         });
                     }
-
-                    if (parsed.length === 0) {
-                        throw new Error('No valid OHLC rows after parsing.');
-                    }
-
+                    if (parsed.length === 0) throw new Error('No valid OHLC rows after parsing.');
                     parsed.sort((a, b) => a.time - b.time);
                     ohlcData = parsed;
                     return parsed;
@@ -501,47 +470,93 @@
                 }
             }
 
-            // ---------- render chart with Plotly ----------
-            function renderChart(data) {
+            // ---------- Similarity (from Colab) ----------
+            function calculateSimilarity(target, window) {
+                // target, window: arrays of { open, high, low, close } (same length)
+                const n = target.length;
+                let sumAbs = 0;
+                for (let i = 0; i < n; i++) {
+                    sumAbs += Math.abs(target[i].open - window[i].open);
+                    sumAbs += Math.abs(target[i].high - window[i].high);
+                    sumAbs += Math.abs(target[i].low - window[i].low);
+                    sumAbs += Math.abs(target[i].close - window[i].close);
+                }
+                const meanError = sumAbs / (n * 4);
+                // compute data range across both sets
+                let minVal = Infinity,
+                    maxVal = -Infinity;
+                const all = [...target, ...window];
+                for (const d of all) {
+                    if (d.open < minVal) minVal = d.open;
+                    if (d.high < minVal) minVal = d.high;
+                    if (d.low < minVal) minVal = d.low;
+                    if (d.close < minVal) minVal = d.close;
+                    if (d.open > maxVal) maxVal = d.open;
+                    if (d.high > maxVal) maxVal = d.high;
+                    if (d.low > maxVal) maxVal = d.low;
+                    if (d.close > maxVal) maxVal = d.close;
+                }
+                const dataRange = maxVal - minVal;
+                if (dataRange === 0) return 100.0;
+                const relativeError = meanError / dataRange;
+                const similarity = Math.max(0, (1 - relativeError) * 100);
+                return similarity;
+            }
+
+            function findMatchingPatterns(data, targetPattern, threshold = 80) {
+                const nTarget = targetPattern.length;
+                const nTotal = data.length;
+                if (nTotal <= nTarget) return [];
+                const matches = [];
+                for (let i = 0; i <= nTotal - nTarget; i++) {
+                    const window = data.slice(i, i + nTarget);
+                    const sim = calculateSimilarity(targetPattern, window);
+                    if (sim >= threshold) {
+                        matches.push({
+                            startIdx: i,
+                            endIdx: i + nTarget - 1,
+                            similarity: sim,
+                            data: window
+                        });
+                    }
+                }
+                // Non-maximum suppression (overlap removal)
+                matches.sort((a, b) => b.similarity - a.similarity);
+                const selected = [];
+                const used = new Set();
+                for (const m of matches) {
+                    let overlap = false;
+                    for (const s of selected) {
+                        if (m.startIdx <= s.endIdx && m.endIdx >= s.startIdx) {
+                            overlap = true;
+                            break;
+                        }
+                    }
+                    if (!overlap) {
+                        selected.push(m);
+                    }
+                }
+                return selected;
+            }
+
+            // ---------- Render chart with BB overlay ----------
+            function renderChart(data, bb = null, matchRanges = null) {
                 if (!data || data.length === 0) {
                     loadStatusEl.textContent = '⚠️ no data';
                     return;
                 }
-
-                console.log('Rendering', data.length, 'hourly candles');
+                console.log('Rendering', data.length, 'candles');
 
                 const hoverTexts = data.map(d => {
-                    const dateStr = d.date.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    });
-                    const timeStr = d.date.toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
+                    const dateStr = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric',
+                        year: 'numeric' });
+                    const timeStr = d.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit',
+                        hour12: false });
                     return `${dateStr} ${timeStr}`;
                 });
-
-                const dateTickVals = [];
-                const dateTickTexts = [];
-                let currentDateKey = '';
-                for (let i = 0; i < data.length; i++) {
-                    const d = data[i].date;
-                    const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-                    if (dateKey !== currentDateKey) {
-                        currentDateKey = dateKey;
-                        dateTickVals.push(i);
-                        const month = d.toLocaleString('en-US', { month: 'short' });
-                        const day = d.getDate();
-                        const yearShort = String(d.getFullYear()).slice(-2);
-                        dateTickTexts.push(`${month} ${day}/${yearShort}`);
-                    }
-                }
-
                 const indices = data.map((_, i) => i);
 
+                // Candlestick trace
                 const trace = {
                     type: 'candlestick',
                     x: indices,
@@ -553,12 +568,53 @@
                     decreasing: { line: { color: '#ef5350' }, fillcolor: '#ef5350' },
                     name: 'OHLC',
                     text: hoverTexts,
-                    hovertemplate: '<b>%{text}</b><br>' +
-                        'Open: %{open:.4f}<br>' +
-                        'High: %{high:.4f}<br>' +
-                        'Low: %{low:.4f}<br>' +
-                        'Close: %{close:.4f}<extra></extra>'
+                    hovertemplate: '<b>%{text}</b><br>Open: %{open:.4f}<br>High: %{high:.4f}<br>Low: %{low:.4f}<br>Close: %{close:.4f}<extra></extra>'
                 };
+
+                const shapes = [];
+
+                // BB shape (if exists)
+                if (bb) {
+                    const x0 = bb.x0,
+                        x1 = bb.x1,
+                        y0 = bb.y0,
+                        y1 = bb.y1;
+                    shapes.push({
+                        type: 'rect',
+                        x0: x0,
+                        x1: x1,
+                        y0: y0,
+                        y1: y1,
+                        line: { color: '#ffaa66', width: 2, dash: 'dash' },
+                        fillcolor: 'rgba(255,170,102,0.10)'
+                    });
+                }
+
+                // Match ranges (green boxes)
+                if (matchRanges) {
+                    for (const m of matchRanges) {
+                        const x0 = m.startIdx - 0.4;
+                        const x1 = m.endIdx + 0.4;
+                        // get y range for this window
+                        let yMin = Infinity,
+                            yMax = -Infinity;
+                        for (let i = m.startIdx; i <= m.endIdx; i++) {
+                            const d = data[i];
+                            if (d.low < yMin) yMin = d.low;
+                            if (d.high > yMax) yMax = d.high;
+                        }
+                        const pad = (yMax - yMin) * 0.05 || 0.01;
+                        shapes.push({
+                            type: 'rect',
+                            x0: x0,
+                            x1: x1,
+                            y0: yMin - pad,
+                            y1: yMax + pad,
+                            line: { color: '#66ddaa', width: 2, dash: 'dot' },
+                            fillcolor: 'rgba(102,221,170,0.08)'
+                        });
+                    }
+                }
 
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -571,8 +627,12 @@
                         color: '#b2c9e0',
                         rangeslider: { visible: false },
                         tickmode: 'array',
-                        tickvals: dateTickVals,
-                        ticktext: dateTickTexts,
+                        tickvals: indices.filter((_, i) => i % Math.max(1, Math.floor(data.length / 20)) === 0),
+                        ticktext: indices.filter((_, i) => i % Math.max(1, Math.floor(data.length / 20)) === 0)
+                            .map(i => {
+                                const d = data[i].date;
+                                return `${d.getMonth()+1}/${d.getDate()}`;
+                            }),
                         tickangle: -45,
                         showspikes: true,
                         spikemode: 'across',
@@ -591,12 +651,9 @@
                     margin: { l: 60, r: 20, t: 20, b: 80 },
                     hovermode: 'x unified',
                     showlegend: false,
-                    dragmode: 'pan', // default: pan
-                    modebar: {
-                        bgcolor: 'rgba(13, 19, 27, 0.8)',
-                        color: '#b2c9e0',
-                        activecolor: '#6b8bb0'
-                    },
+                    dragmode: (activeTool === 'bb') ? 'select' : 'pan',
+                    modebar: { bgcolor: 'rgba(13,19,27,0.8)', color: '#b2c9e0', activecolor: '#6b8bb0' },
+                    shapes: shapes,
                     selections: []
                 };
 
@@ -610,7 +667,6 @@
                 };
 
                 Plotly.newPlot(container, [trace], layout, config);
-                // store reference
                 container._layout = layout;
 
                 candleCountEl.textContent = data.length;
@@ -619,24 +675,23 @@
                     const last = data[data.length - 1].date;
                     dateRangeEl.textContent = `${formatDate(first)} → ${formatDate(last)}`;
                 }
-
                 loadStatusEl.textContent = '✅ ready';
                 loadStatusEl.style.color = '#8fb0d0';
 
-                // set initial y-range with padding
+                // Auto y-range
                 let minY = Infinity,
                     maxY = -Infinity;
                 for (const d of data) {
                     if (d.low < minY) minY = d.low;
                     if (d.high > maxY) maxY = d.high;
                 }
-                const padding = (maxY - minY) * 0.05;
-                Plotly.relayout(container, {
-                    'yaxis.range': [minY - padding, maxY + padding]
-                });
+                const padding = (maxY - minY) * 0.05 || 0.1;
+                Plotly.relayout(container, { 'yaxis.range': [minY - padding, maxY + padding] });
 
-                // set default active tool: pan is active by default
-                setActiveTool('pan');
+                // Update find button state
+                findTrendBtn.disabled = !bb;
+                if (bb) findTrendBtn.title = 'Find patterns similar to BB selection';
+                else findTrendBtn.title = 'Draw a BB first';
             }
 
             function formatDate(date) {
@@ -645,86 +700,112 @@
 
             // ---------- Tool management ----------
             function setActiveTool(tool) {
-                // clear all active states
-                [panBtn, zoomBoxBtn].forEach(btn => btn.classList.remove('active'));
+                [panBtn, bbBtn].forEach(btn => btn.classList.remove('active'));
                 zoomHint.classList.remove('show');
-
-                // remove any previous zoom handler
-                if (container._zoomHandler) {
-                    container.removeListener('plotly_selected', container._zoomHandler);
-                    container._zoomHandler = null;
-                }
-
                 if (tool === 'pan') {
                     activeTool = 'pan';
                     panBtn.classList.add('active');
                     Plotly.relayout(container, { dragmode: 'pan' });
-                } else if (tool === 'zoomBox') {
-                    activeTool = 'zoomBox';
-                    zoomBoxBtn.classList.add('active');
-                    zoomHint.classList.add('show');
+                    zoomHint.textContent = '✧ Pan mode — drag to move';
+                } else if (tool === 'bb') {
+                    activeTool = 'bb';
+                    bbBtn.classList.add('active');
                     Plotly.relayout(container, { dragmode: 'select' });
-
-                    // setup zoom handler
-                    const handler = function(eventData) {
-                        if (!eventData || !eventData.range || !eventData.range.x || !eventData.range.y) {
-                            return;
-                        }
-                        const xRange = eventData.range.x;
-                        const yRange = eventData.range.y;
-
-                        const minX = 0;
-                        const maxX = ohlcData.length - 1;
-                        const x0 = Math.max(minX, Math.min(maxX, xRange[0]));
-                        const x1 = Math.max(minX, Math.min(maxX, xRange[1]));
-
-                        let minY = Infinity,
-                            maxY = -Infinity;
-                        for (const d of ohlcData) {
-                            if (d.low < minY) minY = d.low;
-                            if (d.high > maxY) maxY = d.high;
-                        }
-                        const y0 = Math.max(minY, Math.min(maxY, yRange[0]));
-                        const y1 = Math.max(minY, Math.min(maxY, yRange[1]));
-
-                        if (Math.abs(x1 - x0) < 0.5 || Math.abs(y1 - y0) < 0.01) {
-                            return;
-                        }
-
-                        // Apply zoom
-                        Plotly.relayout(container, {
-                            'xaxis.range': [x0, x1],
-                            'yaxis.range': [y0, y1],
-                            dragmode: 'select'
-                        });
-
-                        // Clear the selection box
-                        setTimeout(() => {
-                            const currentLayout = container.layout || {};
-                            if (currentLayout.selections) {
-                                Plotly.relayout(container, {
-                                    selections: []
-                                });
-                            }
-                            Plotly.relayout(container, {
-                                'xaxis.range': [x0, x1],
-                                'yaxis.range': [y0, y1],
-                                selections: []
-                            });
-                        }, 50);
-                    };
-                    container._zoomHandler = handler;
-                    container.on('plotly_selected', handler);
+                    zoomHint.textContent = '✧ Drag a rectangle over candles to define BB';
+                    zoomHint.classList.add('show');
                 } else {
-                    activeTool = null;
-                    // fallback to pan
-                    Plotly.relayout(container, { dragmode: 'pan' });
-                    panBtn.classList.add('active');
                     activeTool = 'pan';
+                    panBtn.classList.add('active');
+                    Plotly.relayout(container, { dragmode: 'pan' });
+                }
+                // Clear any BB selection when switching tools
+                if (tool !== 'bb') {
+                    bbSelection = null;
+                    findTrendBtn.disabled = true;
                 }
             }
 
-            // ---------- Zoom functions ----------
+            // ---------- BB selection handler (plotly_selected) ----------
+            function handleSelection(eventData) {
+                if (activeTool !== 'bb') return;
+                if (!eventData || !eventData.range || !eventData.range.x || !eventData.range.y) {
+                    return;
+                }
+                const xRange = eventData.range.x;
+                const yRange = eventData.range.y;
+                const minX = 0,
+                    maxX = ohlcData.length - 1;
+                let x0 = Math.max(minX, Math.min(maxX, xRange[0]));
+                let x1 = Math.max(minX, Math.min(maxX, xRange[1]));
+                if (x0 > x1)[x0, x1] = [x1, x0];
+                // Clamp y
+                let minY = Infinity,
+                    maxY = -Infinity;
+                for (const d of ohlcData) {
+                    if (d.low < minY) minY = d.low;
+                    if (d.high > maxY) maxY = d.high;
+                }
+                let y0 = Math.max(minY, Math.min(maxY, yRange[0]));
+                let y1 = Math.max(minY, Math.min(maxY, yRange[1]));
+                if (y0 > y1)[y0, y1] = [y1, y0];
+
+                // Only accept if range is meaningful
+                if (x1 - x0 < 1 || y1 - y0 < 0.001) {
+                    // too small, ignore
+                    return;
+                }
+
+                bbSelection = { x0, x1, y0, y1 };
+                findTrendBtn.disabled = false;
+                findTrendBtn.title = 'Click to find patterns ≥80% similar';
+
+                // re-render with BB
+                renderChart(ohlcData, bbSelection, null);
+
+                // clear the selection box
+                setTimeout(() => {
+                    Plotly.relayout(container, { selections: [] });
+                }, 50);
+            }
+
+            // ---------- Find Trend ----------
+            function findTrend() {
+                if (!bbSelection || !ohlcData || ohlcData.length === 0) return;
+                const { x0, x1, y0, y1 } = bbSelection;
+                // Get candles that are fully or partially inside the BB
+                const targetCandles = [];
+                for (let i = Math.floor(x0); i <= Math.ceil(x1); i++) {
+                    if (i < 0 || i >= ohlcData.length) continue;
+                    const d = ohlcData[i];
+                    // Check if candle overlaps BB in price (partial touch)
+                    const overlap = (d.low <= y1 && d.high >= y0);
+                    if (overlap) {
+                        targetCandles.push(d);
+                    }
+                }
+                if (targetCandles.length < 3) {
+                    alert('BB must cover at least 3 candles with price overlap.');
+                    return;
+                }
+
+                // Find matches with threshold 80%
+                const matches = findMatchingPatterns(ohlcData, targetCandles, 80);
+                if (matches.length === 0) {
+                    alert('No patterns found with ≥80% similarity.');
+                    renderChart(ohlcData, bbSelection, null);
+                    return;
+                }
+
+                // Show matches on chart
+                renderChart(ohlcData, bbSelection, matches);
+                console.log(`Found ${matches.length} matches.`);
+                // Optionally show details in console
+                for (const m of matches) {
+                    console.log(`Match ${m.startIdx}-${m.endIdx}  similarity: ${m.similarity.toFixed(1)}%`);
+                }
+            }
+
+            // ---------- Zoom / Home ----------
             function getCurrentRange() {
                 const layout = container.layout || {};
                 const xRange = layout.xaxis && layout.xaxis.range ? layout.xaxis.range : null;
@@ -735,39 +816,34 @@
             function zoomIn() {
                 const { xRange, yRange } = getCurrentRange();
                 if (!xRange || !yRange) return;
-                const xMid = (xRange[0] + xRange[1]) / 2;
-                const yMid = (yRange[0] + yRange[1]) / 2;
-                const xSpan = (xRange[1] - xRange[0]) * 0.5;
-                const ySpan = (yRange[1] - yRange[0]) * 0.5;
-                const newX = [xMid - xSpan * 0.5, xMid + xSpan * 0.5];
-                const newY = [yMid - ySpan * 0.5, yMid + ySpan * 0.5];
-                // clamp
+                const xMid = (xRange[0] + xRange[1]) / 2,
+                    yMid = (yRange[0] + yRange[1]) / 2;
+                const xSpan = (xRange[1] - xRange[0]) * 0.5,
+                    ySpan = (yRange[1] - yRange[0]) * 0.5;
+                let newX = [xMid - xSpan * 0.5, xMid + xSpan * 0.5];
+                let newY = [yMid - ySpan * 0.5, yMid + ySpan * 0.5];
                 const minX = 0,
                     maxX = ohlcData.length - 1;
-                const clampedX = [Math.max(minX, newX[0]), Math.min(maxX, newX[1])];
+                newX = [Math.max(minX, newX[0]), Math.min(maxX, newX[1])];
                 let minY = Infinity,
                     maxY = -Infinity;
                 for (const d of ohlcData) {
                     if (d.low < minY) minY = d.low;
                     if (d.high > maxY) maxY = d.high;
                 }
-                const clampedY = [Math.max(minY, newY[0]), Math.min(maxY, newY[1])];
-                if (clampedX[1] - clampedX[0] > 0.5 && clampedY[1] - clampedY[0] > 0.001) {
-                    Plotly.relayout(container, {
-                        'xaxis.range': clampedX,
-                        'yaxis.range': clampedY,
-                        selections: []
-                    });
+                newY = [Math.max(minY, newY[0]), Math.min(maxY, newY[1])];
+                if (newX[1] - newX[0] > 0.5 && newY[1] - newY[0] > 0.001) {
+                    Plotly.relayout(container, { 'xaxis.range': newX, 'yaxis.range': newY, selections: [] });
                 }
             }
 
             function zoomOut() {
                 const { xRange, yRange } = getCurrentRange();
                 if (!xRange || !yRange) return;
-                const xMid = (xRange[0] + xRange[1]) / 2;
-                const yMid = (yRange[0] + yRange[1]) / 2;
-                const xSpan = (xRange[1] - xRange[0]) * 1.8;
-                const ySpan = (yRange[1] - yRange[0]) * 1.8;
+                const xMid = (xRange[0] + xRange[1]) / 2,
+                    yMid = (yRange[0] + yRange[1]) / 2;
+                const xSpan = (xRange[1] - xRange[0]) * 1.8,
+                    ySpan = (yRange[1] - yRange[0]) * 1.8;
                 let newX = [xMid - xSpan * 0.5, xMid + xSpan * 0.5];
                 let newY = [yMid - ySpan * 0.5, yMid + ySpan * 0.5];
                 const minX = 0,
@@ -778,119 +854,98 @@
                 newX = [Math.max(minX, newX[0]), Math.min(maxX, newX[1])];
                 newY = [Math.max(minY - padY, newY[0]), Math.min(maxY + padY, newY[1])];
                 if (newX[1] - newX[0] > 0.5 && newY[1] - newY[0] > 0.001) {
-                    Plotly.relayout(container, {
-                        'xaxis.range': newX,
-                        'yaxis.range': newY,
-                        selections: []
-                    });
+                    Plotly.relayout(container, { 'xaxis.range': newX, 'yaxis.range': newY, selections: [] });
                 }
             }
 
             function resetHome() {
                 if (!ohlcData || ohlcData.length === 0) return;
-                const minX = 0;
-                const maxX = ohlcData.length - 1;
+                const minX = 0,
+                    maxX = ohlcData.length - 1;
                 let minY = Infinity,
                     maxY = -Infinity;
                 for (const d of ohlcData) {
                     if (d.low < minY) minY = d.low;
                     if (d.high > maxY) maxY = d.high;
                 }
-                const padding = (maxY - minY) * 0.05;
+                const padding = (maxY - minY) * 0.05 || 0.1;
                 Plotly.relayout(container, {
                     'xaxis.range': [minX - 0.5, maxX + 0.5],
                     'yaxis.range': [minY - padding, maxY + padding],
                     selections: []
                 });
+                // keep BB and matches if any
+                if (bbSelection) {
+                    renderChart(ohlcData, bbSelection, null);
+                } else {
+                    renderChart(ohlcData, null, null);
+                }
             }
 
-            // ---------- Refresh function ----------
+            // ---------- Refresh ----------
             function refreshPage() {
-                // Reset tool states
                 setActiveTool('pan');
-                
-                // Reset zoom to home
-                resetHome();
-                
-                // Reload data and re-render chart
+                bbSelection = null;
+                findTrendBtn.disabled = true;
                 loadExcel().then(data => {
                     if (data && data.length > 0) {
-                        renderChart(data);
-                    } else {
-                        loadStatusEl.textContent = '⚠️ no data loaded';
-                        loadStatusEl.style.color = '#e6b88a';
+                        ohlcData = data;
+                        renderChart(ohlcData, null, null);
+                        setActiveTool('pan');
                     }
                 });
             }
 
-            // ---------- init ----------
+            // ---------- Init ----------
             async function init() {
                 const data = await loadExcel();
                 if (data && data.length > 0) {
-                    renderChart(data);
+                    ohlcData = data;
+                    renderChart(ohlcData, null, null);
+                    setActiveTool('pan');
                 } else {
                     loadStatusEl.textContent = '⚠️ no data loaded';
                     loadStatusEl.style.color = '#e6b88a';
                 }
 
-                // ----- Tool buttons -----
-                panBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
+                // --- event listeners ---
+                panBtn.addEventListener('click', () => {
                     if (activeTool === 'pan') {
-                        setActiveTool(null);
-                        panBtn.classList.remove('active');
-                        activeTool = null;
-                        Plotly.relayout(container, { dragmode: 'pan' });
+                        setActiveTool('pan');
                     } else {
                         setActiveTool('pan');
                     }
                 });
-
-                zoomBoxBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    if (activeTool === 'zoomBox') {
+                bbBtn.addEventListener('click', () => {
+                    if (activeTool === 'bb') {
                         setActiveTool('pan');
                     } else {
-                        setActiveTool('zoomBox');
+                        setActiveTool('bb');
                     }
                 });
+                findTrendBtn.addEventListener('click', findTrend);
 
-                homeBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    resetHome();
-                });
+                homeBtn.addEventListener('click', resetHome);
+                zoomInBtn.addEventListener('click', zoomIn);
+                zoomOutBtn.addEventListener('click', zoomOut);
+                refreshBtn.addEventListener('click', refreshPage);
 
-                zoomInBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    zoomIn();
-                });
+                container.addEventListener('dblclick', resetHome);
 
-                zoomOutBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    zoomOut();
-                });
+                // Selection handler for BB
+                container.on('plotly_selected', handleSelection);
 
-                // Refresh button
-                refreshBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    refreshPage();
-                });
-
-                // double-click reset
-                container.addEventListener('dblclick', function(e) {
-                    resetHome();
+                // resize
+                let resizeTimer;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        if (container && container.clientWidth > 0) {
+                            Plotly.Plots.resize(container);
+                        }
+                    }, 200);
                 });
             }
-
-            let resizeTimer;
-            window.addEventListener('resize', () => {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => {
-                    if (container && container.clientWidth > 0) {
-                        Plotly.Plots.resize(container);
-                    }
-                }, 200);
-            });
 
             init();
         })();
