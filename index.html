@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>HoldMyWork · OHLC</title>
+    <title>HoldMyWork · OHLC + Zoom</title>
     <!-- Plotly CDN -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js">
     </script>
@@ -107,6 +107,42 @@
             font-weight: 500;
         }
 
+        .zoom-btn {
+            background: #1e2a36;
+            border: 1px solid #3a5068;
+            color: #d1d9e6;
+            padding: 6px 16px 6px 12px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            letter-spacing: 0.3px;
+        }
+        .zoom-btn:hover {
+            background: #2a3a4a;
+            border-color: #5a7a9a;
+            color: white;
+        }
+        .zoom-btn.active {
+            background: #2d4b5e;
+            border-color: #6a9fc0;
+            box-shadow: 0 0 12px rgba(70, 150, 220, 0.3);
+        }
+        .zoom-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
         .chart-wrapper {
             flex: 1 1 auto;
             min-height: 0;
@@ -126,6 +162,30 @@
             background: #0d131b;
         }
 
+        /* subtle instruction when zoom tool is active */
+        .zoom-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a2633ee;
+            backdrop-filter: blur(6px);
+            padding: 6px 18px;
+            border-radius: 60px;
+            border: 1px solid #3a5a7a;
+            font-size: 0.8rem;
+            color: #b8d0e8;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+        .zoom-hint.show {
+            opacity: 1;
+        }
+
         @media (max-width: 700px) {
             body {
                 padding: 10px 12px 12px 12px;
@@ -140,6 +200,10 @@
             .info-badge {
                 font-size: 0.65rem;
                 padding: 2px 10px;
+            }
+            .zoom-btn {
+                font-size: 0.75rem;
+                padding: 4px 12px 4px 8px;
             }
         }
 
@@ -174,10 +238,19 @@
             <span>📅 <span id="dateRange">—</span></span>
             <span id="loadStatus" style="color:#8fb0d0;">⏳ loading…</span>
         </div>
+        <button class="zoom-btn" id="zoomBtn" title="Click to enable zoom box, then drag on chart to zoom">
+            <svg viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="16" y1="16" x2="22" y2="22" />
+                <rect x="2" y="2" width="18" height="18" rx="2" stroke-dasharray="4 2" opacity="0.5" />
+            </svg>
+            <span>Magnify</span>
+        </button>
     </div>
 
-    <div class="chart-wrapper">
+    <div class="chart-wrapper" id="chartWrapper">
         <div id="chart-container"></div>
+        <div class="zoom-hint" id="zoomHint">✧ Drag a rectangle to zoom in</div>
     </div>
 
     <script>
@@ -188,8 +261,11 @@
             const candleCountEl = document.getElementById('candleCount');
             const dateRangeEl = document.getElementById('dateRange');
             const loadStatusEl = document.getElementById('loadStatus');
+            const zoomBtn = document.getElementById('zoomBtn');
+            const zoomHint = document.getElementById('zoomHint');
 
             let ohlcData = [];
+            let isZoomActive = false;
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -311,7 +387,6 @@
 
                 console.log('Rendering', data.length, 'hourly candles');
 
-                // ---------- prepare hover text: show full date + time ----------
                 const hoverTexts = data.map(d => {
                     const dateStr = d.date.toLocaleDateString('en-US', { 
                         month: 'short', day: 'numeric', year: 'numeric' 
@@ -322,8 +397,7 @@
                     return `${dateStr} ${timeStr}`;
                 });
 
-                // ---------- x-axis: show date labels like "Aug 1/26", "Aug 2/26", etc. ----------
-                // we want to show a date label for each unique date
+                // x-axis date labels
                 const dateTickVals = [];
                 const dateTickTexts = [];
                 let currentDateKey = '';
@@ -333,7 +407,6 @@
                     if (dateKey !== currentDateKey) {
                         currentDateKey = dateKey;
                         dateTickVals.push(i);
-                        // format like "Aug 1/26"  (month short + day + '/' + last two digits of year)
                         const month = d.toLocaleString('en-US', { month: 'short' });
                         const day = d.getDate();
                         const yearShort = String(d.getFullYear()).slice(-2);
@@ -341,10 +414,8 @@
                     }
                 }
 
-                // Use numeric indices for x-axis
                 const indices = data.map((_, i) => i);
 
-                // Create candlestick trace
                 const trace = {
                     type: 'candlestick',
                     x: indices,
@@ -352,16 +423,10 @@
                     high: data.map(d => d.high),
                     low: data.map(d => d.low),
                     close: data.map(d => d.close),
-                    increasing: {
-                        line: { color: '#26a69a' },
-                        fillcolor: '#26a69a'
-                    },
-                    decreasing: {
-                        line: { color: '#ef5350' },
-                        fillcolor: '#ef5350'
-                    },
+                    increasing: { line: { color: '#26a69a' }, fillcolor: '#26a69a' },
+                    decreasing: { line: { color: '#ef5350' }, fillcolor: '#ef5350' },
                     name: 'OHLC',
-                    text: hoverTexts,    // full date+time on hover
+                    text: hoverTexts,
                     hovertemplate: '<b>%{text}</b><br>' +
                         'Open: %{open:.4f}<br>' +
                         'High: %{high:.4f}<br>' +
@@ -372,15 +437,9 @@
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
                     plot_bgcolor: 'rgba(0,0,0,0)',
-                    font: {
-                        color: '#b2c9e0',
-                        family: 'system-ui, -apple-system, sans-serif'
-                    },
+                    font: { color: '#b2c9e0', family: 'system-ui, -apple-system, sans-serif' },
                     xaxis: {
-                        title: {
-                            text: 'Date',
-                            font: { color: '#b2c9e0' }
-                        },
+                        title: { text: 'Date', font: { color: '#b2c9e0' } },
                         gridcolor: '#1f2b36',
                         zerolinecolor: '#1f2b36',
                         color: '#b2c9e0',
@@ -393,30 +452,20 @@
                         spikemode: 'across',
                         spikethickness: 1,
                         spikecolor: '#4d6a89',
-                        tickfont: {
-                            size: 10
-                        },
+                        tickfont: { size: 10 },
                         range: [-0.5, indices.length - 0.5]
                     },
                     yaxis: {
-                        title: {
-                            text: 'Price',
-                            font: { color: '#b2c9e0' }
-                        },
+                        title: { text: 'Price', font: { color: '#b2c9e0' } },
                         gridcolor: '#1f2b36',
                         zerolinecolor: '#1f2b36',
                         color: '#b2c9e0',
                         side: 'right'
                     },
-                    margin: {
-                        l: 60,
-                        r: 20,
-                        t: 20,
-                        b: 80
-                    },
+                    margin: { l: 60, r: 20, t: 20, b: 80 },
                     hovermode: 'x unified',
                     showlegend: false,
-                    dragmode: 'zoom',
+                    dragmode: 'zoom',   // default: 'zoom' (pan+zoom via plotly)
                     modebar: {
                         bgcolor: 'rgba(13, 19, 27, 0.8)',
                         color: '#b2c9e0',
@@ -431,10 +480,10 @@
                     displaylogo: false
                 };
 
-                // Render the chart
                 Plotly.newPlot(container, [trace], layout, config);
+                // store reference to layout for later zoom updates
+                container._layout = layout;
 
-                // Update info
                 candleCountEl.textContent = data.length;
                 if (data.length > 0) {
                     const first = data[0].date;
@@ -450,6 +499,96 @@
                 return date.toISOString().slice(0, 10);
             }
 
+            // ---------- ZOOM TOOL: draw bounding box & fit ----------
+            function enableZoomTool() {
+                if (isZoomActive) {
+                    // disable
+                    isZoomActive = false;
+                    zoomBtn.classList.remove('active');
+                    zoomHint.classList.remove('show');
+                    // restore default dragmode
+                    Plotly.relayout(container, { dragmode: 'zoom' });
+                    return;
+                }
+
+                // activate
+                isZoomActive = true;
+                zoomBtn.classList.add('active');
+                zoomHint.classList.add('show');
+
+                // set dragmode to 'select' to let user draw a box (rectangular selection)
+                Plotly.relayout(container, { dragmode: 'select' });
+
+                // remove any existing selection event to avoid duplicates
+                if (container._zoomHandler) {
+                    container.removeListener('plotly_selected', container._zoomHandler);
+                }
+
+                // handler: when selection is made, zoom to that range
+                const handler = function(eventData) {
+                    if (!eventData || !eventData.range || !eventData.range.x || !eventData.range.y) {
+                        // selection cleared or empty
+                        return;
+                    }
+                    const xRange = eventData.range.x;
+                    const yRange = eventData.range.y;
+                    
+                    // clamp to data bounds
+                    const minX = 0;
+                    const maxX = ohlcData.length - 1;
+                    const x0 = Math.max(minX, Math.min(maxX, xRange[0]));
+                    const x1 = Math.max(minX, Math.min(maxX, xRange[1]));
+                    
+                    // get price range from data to clamp y
+                    let minY = Infinity, maxY = -Infinity;
+                    for (const d of ohlcData) {
+                        if (d.low < minY) minY = d.low;
+                        if (d.high > maxY) maxY = d.high;
+                    }
+                    const y0 = Math.max(minY, Math.min(maxY, yRange[0]));
+                    const y1 = Math.max(minY, Math.min(maxY, yRange[1]));
+
+                    // only zoom if selection is meaningful
+                    if (Math.abs(x1 - x0) < 0.5 || Math.abs(y1 - y0) < 0.01) {
+                        // too small, ignore
+                        return;
+                    }
+
+                    // apply zoom
+                    Plotly.relayout(container, {
+                        'xaxis.range': [x0, x1],
+                        'yaxis.range': [y0, y1],
+                        dragmode: 'select'  // keep in select mode for further zooms
+                    });
+
+                    // keep the tool active (stay in select mode)
+                };
+
+                container._zoomHandler = handler;
+                container.on('plotly_selected', handler);
+
+                // also handle click on background to reset zoom? not needed, user can double-click or use home button.
+                // but we keep select mode.
+            }
+
+            // reset zoom to full range (double-click or home)
+            function resetZoom() {
+                if (!ohlcData || ohlcData.length === 0) return;
+                const minX = 0;
+                const maxX = ohlcData.length - 1;
+                let minY = Infinity, maxY = -Infinity;
+                for (const d of ohlcData) {
+                    if (d.low < minY) minY = d.low;
+                    if (d.high > maxY) maxY = d.high;
+                }
+                const padding = (maxY - minY) * 0.05;
+                Plotly.relayout(container, {
+                    'xaxis.range': [minX - 0.5, maxX + 0.5],
+                    'yaxis.range': [minY - padding, maxY + padding],
+                    dragmode: isZoomActive ? 'select' : 'zoom'
+                });
+            }
+
             // ---------- handle resize ----------
             function handleResize() {
                 if (container && container.clientWidth > 0) {
@@ -462,10 +601,40 @@
                 const data = await loadExcel();
                 if (data && data.length > 0) {
                     renderChart(data);
+                    // after render, set initial y-range with some padding
+                    let minY = Infinity, maxY = -Infinity;
+                    for (const d of data) {
+                        if (d.low < minY) minY = d.low;
+                        if (d.high > maxY) maxY = d.high;
+                    }
+                    const padding = (maxY - minY) * 0.05;
+                    Plotly.relayout(container, {
+                        'yaxis.range': [minY - padding, maxY + padding]
+                    });
                 } else {
                     loadStatusEl.textContent = '⚠️ no data loaded';
                     loadStatusEl.style.color = '#e6b88a';
                 }
+
+                // zoom button toggle
+                zoomBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    enableZoomTool();
+                });
+
+                // double-click on chart to reset zoom (if not in select mode, but we allow)
+                container.addEventListener('dblclick', function(e) {
+                    if (isZoomActive) {
+                        // reset zoom but keep tool active
+                        resetZoom();
+                    } else {
+                        // default double-click reset
+                        resetZoom();
+                    }
+                });
+
+                // also reset zoom when plotly 'autosize' or double-click on axis?
+                // we handle via dblclick on container.
             }
 
             let resizeTimer;
