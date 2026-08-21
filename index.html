@@ -247,7 +247,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            kkk care of my work while I go do something else.
+            Tke care of my work while I go do something else.
         </div>
     </header>
 
@@ -546,7 +546,9 @@
                         bgcolor: 'rgba(13, 19, 27, 0.8)',
                         color: '#b2c9e0',
                         activecolor: '#6b8bb0'
-                    }
+                    },
+                    // Add selection style to make it visible
+                    selections: []
                 };
 
                 const config = {
@@ -640,11 +642,34 @@
                             return;
                         }
 
+                        // Apply zoom
                         Plotly.relayout(container, {
                             'xaxis.range': [x0, x1],
                             'yaxis.range': [y0, y1],
                             dragmode: 'select'
                         });
+
+                        // Clear the selection box by emitting a dummy selection event
+                        // or by using the Plotly selection API to clear it
+                        // We'll use a small hack: reapply the layout without selections
+                        // Actually, the cleanest way is to use Plotly's selection clearing
+                        // by calling relayout with selections: []
+                        setTimeout(() => {
+                            // Clear selection after zoom
+                            const currentLayout = container.layout || {};
+                            if (currentLayout.selections) {
+                                Plotly.relayout(container, {
+                                    selections: []
+                                });
+                            }
+                            // Also try to clear via the selection event by resetting
+                            // Force a redraw without selection
+                            Plotly.relayout(container, {
+                                'xaxis.range': [x0, x1],
+                                'yaxis.range': [y0, y1],
+                                selections: []
+                            });
+                        }, 50);
                     };
                     container._zoomHandler = handler;
                     container.on('plotly_selected', handler);
@@ -688,7 +713,8 @@
                 if (clampedX[1] - clampedX[0] > 0.5 && clampedY[1] - clampedY[0] > 0.001) {
                     Plotly.relayout(container, {
                         'xaxis.range': clampedX,
-                        'yaxis.range': clampedY
+                        'yaxis.range': clampedY,
+                        selections: []
                     });
                 }
             }
@@ -712,7 +738,8 @@
                 if (newX[1] - newX[0] > 0.5 && newY[1] - newY[0] > 0.001) {
                     Plotly.relayout(container, {
                         'xaxis.range': newX,
-                        'yaxis.range': newY
+                        'yaxis.range': newY,
+                        selections: []
                     });
                 }
             }
@@ -730,7 +757,8 @@
                 const padding = (maxY - minY) * 0.05;
                 Plotly.relayout(container, {
                     'xaxis.range': [minX - 0.5, maxX + 0.5],
-                    'yaxis.range': [minY - padding, maxY + padding]
+                    'yaxis.range': [minY - padding, maxY + padding],
+                    selections: []
                 });
             }
 
