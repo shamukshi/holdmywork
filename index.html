@@ -151,7 +151,7 @@
         <h1>HoldMyWork</h1>
 
         <p class="tagline">
-            ....…a place where you can create an
+            ....…a placeeee where you can create an
             <strong>autopilot for your work</strong>
         </p>
 
@@ -198,16 +198,45 @@
 
     <script>
 
-        function handleGoogleLogin(response) {
+        async function handleGoogleLogin(response) {
 
-            console.log("Google login successful");
+            const status = document.getElementById("login-status");
 
-            console.log("Google ID token:");
-            console.log(response.credential);
+            status.textContent = "Signing in...";
 
-            document.getElementById("login-status").textContent =
-                "Google login successful!";
+            try {
 
+                const result = await fetch(
+                    "https://api.holdmywork.com/auth/google",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            credential: response.credential
+                        })
+                    }
+                );
+
+                const data = await result.json();
+
+                if (!result.ok || !data.success) {
+                    throw new Error("Login failed");
+                }
+
+                status.textContent =
+                    "Welcome, " + data.name + "!";
+
+                console.log("Logged in user:", data);
+
+            } catch (error) {
+
+                console.error(error);
+
+                status.textContent =
+                    "Google login failed. Please try again.";
+            }
         }
 
     </script>
