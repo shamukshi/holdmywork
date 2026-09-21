@@ -60,58 +60,11 @@
             color: #0a2540;
         }
 
-        /* Google Sign-In */
         .google-login {
             display: flex;
             justify-content: center;
-            margin-bottom: 1.5rem;
         }
 
-        .or {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            margin-bottom: 1.5rem;
-        }
-
-        /* Download button */
-        .download-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.6rem;
-            background: #0a2540;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 1.15rem;
-            padding: 1rem 2.5rem;
-            border-radius: 100px;
-            text-decoration: none;
-            transition:
-                background 0.2s ease,
-                transform 0.2s ease,
-                box-shadow 0.2s ease;
-            box-shadow: 0 8px 20px -8px rgba(10, 37, 64, 0.3);
-            border: none;
-            cursor: pointer;
-        }
-
-        .download-btn:hover {
-            background: #143d66;
-            transform: translateY(-2px);
-            box-shadow: 0 14px 25px -8px rgba(10, 37, 64, 0.4);
-        }
-
-        .download-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 6px 15px -6px rgba(10, 37, 64, 0.3);
-        }
-
-        .download-btn .icon {
-            font-size: 1.3rem;
-            line-height: 1;
-        }
-
-        /* Login status */
         #login-status {
             margin-top: 1.5rem;
             font-size: 0.9rem;
@@ -134,12 +87,6 @@
                 font-size: 1.05rem;
                 margin-bottom: 1.5rem;
             }
-
-            .download-btn {
-                font-size: 1rem;
-                padding: 0.9rem 1.8rem;
-                width: 100%;
-            }
         }
     </style>
 </head>
@@ -154,7 +101,6 @@
             ....…a placeeee where you can create an
             <strong>autopilot for your work</strong>
         </p>
-
 
         <!-- Google Sign-In -->
         <div class="google-login">
@@ -173,22 +119,6 @@
             </div>
 
         </div>
-
-
-        <div class="or">
-            or
-        </div>
-
-
-        <!-- Download -->
-        <a
-            class="download-btn"
-            href="https://api.holdmywork.com/download"
-        >
-            <span class="icon">⬇</span>
-            Download HoldMyWork
-        </a>
-
 
         <!-- Login status -->
         <div id="login-status"></div>
@@ -210,9 +140,13 @@
                     "https://api.holdmywork.com/auth/google",
                     {
                         method: "POST",
+
                         headers: {
                             "Content-Type": "application/json"
                         },
+
+                        credentials: "include",
+
                         body: JSON.stringify({
                             credential: response.credential
                         })
@@ -228,7 +162,8 @@
                 status.textContent =
                     "Welcome, " + data.name + "!";
 
-                console.log("Logged in user:", data);
+                // Redirect to dashboard
+                window.location.href = "/dashboard.html";
 
             } catch (error) {
 
