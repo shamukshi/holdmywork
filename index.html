@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>HoldMyWork · autopilot for your work</title>
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <style>
         * {
             margin: 0;
@@ -27,7 +32,9 @@
             background: #ffffff;
             border-radius: 2rem;
             padding: 3rem 2.5rem;
-            box-shadow: 0 15px 35px -10px rgba(0, 20, 50, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.02);
+            box-shadow:
+                0 15px 35px -10px rgba(0, 20, 50, 0.1),
+                0 0 0 1px rgba(0, 0, 0, 0.02);
             text-align: center;
         }
 
@@ -43,7 +50,7 @@
         .tagline {
             font-size: 1.25rem;
             color: #425b76;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
             font-weight: 400;
             line-height: 1.5;
         }
@@ -53,6 +60,20 @@
             color: #0a2540;
         }
 
+        /* Google Sign-In */
+        .google-login {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .or {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Download button */
         .download-btn {
             display: inline-flex;
             align-items: center;
@@ -65,7 +86,10 @@
             padding: 1rem 2.5rem;
             border-radius: 100px;
             text-decoration: none;
-            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            transition:
+                background 0.2s ease,
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
             box-shadow: 0 8px 20px -8px rgba(10, 37, 64, 0.3);
             border: none;
             cursor: pointer;
@@ -87,7 +111,16 @@
             line-height: 1;
         }
 
+        /* Login status */
+        #login-status {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #425b76;
+            min-height: 20px;
+        }
+
         @media (max-width: 480px) {
+
             .card {
                 padding: 2rem 1.5rem;
                 border-radius: 1.5rem;
@@ -99,7 +132,7 @@
 
             .tagline {
                 font-size: 1.05rem;
-                margin-bottom: 2rem;
+                margin-bottom: 1.5rem;
             }
 
             .download-btn {
@@ -110,10 +143,44 @@
         }
     </style>
 </head>
+
 <body>
+
     <div class="card">
+
         <h1>HoldMyWork</h1>
-        <p class="tagline">.......a place where you can create an <strong>autopilot for your work</strong></p>
+
+        <p class="tagline">
+            ....…a place where you can create an
+            <strong>autopilot for your work</strong>
+        </p>
+
+
+        <!-- Google Sign-In -->
+        <div class="google-login">
+
+            <div id="g_id_onload"
+                 data-client_id="697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com"
+                 data-callback="handleGoogleLogin">
+            </div>
+
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-shape="pill">
+            </div>
+
+        </div>
+
+
+        <div class="or">
+            or
+        </div>
+
+
+        <!-- Download -->
         <a
             class="download-btn"
             href="https://api.holdmywork.com/download"
@@ -121,6 +188,29 @@
             <span class="icon">⬇</span>
             Download HoldMyWork
         </a>
+
+
+        <!-- Login status -->
+        <div id="login-status"></div>
+
     </div>
+
+
+    <script>
+
+        function handleGoogleLogin(response) {
+
+            console.log("Google login successful");
+
+            console.log("Google ID token:");
+            console.log(response.credential);
+
+            document.getElementById("login-status").textContent =
+                "Google login successful!";
+
+        }
+
+    </script>
+
 </body>
 </html>
