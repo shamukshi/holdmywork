@@ -6,6 +6,9 @@
 
     <title>HoldMyWork Dashboard</title>
 
+    <!-- Razorpay Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
     <style>
         * {
             box-sizing: border-box;
@@ -40,7 +43,7 @@
             margin-bottom: 30px;
         }
 
-        .download-btn {
+        .btn {
             display: inline-block;
             padding: 15px 30px;
             border-radius: 10px;
@@ -50,12 +53,46 @@
             font-size: 17px;
             font-weight: bold;
             cursor: pointer;
+            border: none;
             transition: 0.2s;
+            width: 100%;
         }
 
-        .download-btn:hover {
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
             opacity: 0.9;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .download-btn {
+            background: #111;
+        }
+
+        .download-btn.ready {
+            background: #16a34a;
+        }
+
+        .status {
+            margin-top: 18px;
+            font-size: 14px;
+            min-height: 20px;
+            color: #666;
+        }
+
+        .status.error {
+            color: #dc2626;
+        }
+
+        .status.success {
+            color: #16a34a;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -66,16 +103,172 @@
 
         <h1>HoldMyWork</h1>
 
-        <p>Your automation tool is ready.</p>
+        <p id="subtitle">Pay ₹500 to unlock your download.</p>
 
+        <!-- Pay Button (visible initially) -->
+        <button id="pay-button" class="btn">
+            💳 Pay ₹500
+        </button>
+
+        <!-- Download Button (hidden until payment verified) -->
         <a
-            class="download-btn"
+            id="download-button"
+            class="btn download-btn ready hidden"
             href="https://api.holdmywork.com/download"
             download>
             ⬇ Download Tool
         </a>
 
+        <div id="status" class="status"></div>
+
     </div>
+
+    <script>
+        // ================================================
+        // CONFIG
+        // ================================================
+
+        // Your Cloudflare Worker API base
+        const API_BASE = "https://api.holdmywork.com";
+
+        // Razorpay public key ID (safe to expose)
+        const RAZORPAY_KEY_ID = "rzp_test_TezJSZDm1DT6Kt";
+
+        // Price in paise (₹500 = 500 * 100)
+        const AMOUNT_PAISE = 50000;
+
+        // ================================================
+        // ELEMENTS
+        // ================================================
+
+        const payButton = document.getElementById("pay-button");
+        const downloadButton = document.getElementById("download-button");
+        const statusEl = document.getElementById("status");
+        const subtitleEl = document.getElementById("subtitle");
+
+        // ================================================
+        // HELPERS
+        // ================================================
+
+        function setStatus(message, type = "") {
+            statusEl.textContent = message;
+            statusEl.className = "status" + (type ? " " + type : "");
+        }
+
+        function unlockDownload() {
+            // Hide pay button, show download button
+            payButton.classList.add("hidden");
+            downloadButton.classList.remove("hidden");
+
+            subtitleEl.textContent = "Payment successful! Your download is ready.";
+            setStatus("✅ Payment verified", "success");
+        }
+
+        // ================================================
+        // PAYMENT FLOW
+        // ================================================
+
+        payButton.addEventListener("click", async () => {
+
+            setStatus("Creating order...");
+            payButton.disabled = true;
+
+            try {
+                // -------- STEP 1: Create order on backend --------
+                const orderResponse = await fetch(
+                    `${API_BASE}/api/create-order`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            amount: AMOUNT_PAISE,
+                            currency: "INR",
+                            receipt: `hmw_${Date.now()}`
+                        })
+                    }
+                );
+
+                const orderData = await orderResponse.json();
+
+                if (!orderData.success) {
+                    throw new Error(orderData.error || "Failed to create order");
+                }
+
+                // -------- STEP 2: Open Razorpay modal --------
+                const options = {
+                    key: RAZORPAY_KEY_ID,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: "HoldMyWork",
+                    description: "Download access",
+                    order_id: orderData.order_id,
+
+                    handler: async function (response) {
+                        // -------- STEP 3: Verify signature --------
+                        setStatus("Verifying payment...");
+
+                        try {
+                            const verifyResponse = await fetch(
+                                `${API_BASE}/api/verify-payment`,
+                                {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        razorpay_order_id: response.razorpay_order_id,
+                                        razorpay_payment_id: response.razorpay_payment_id,
+                                        razorpay_signature: response.razorpay_signature
+                                    })
+                                }
+                            );
+
+                            const verifyData = await verifyResponse.json();
+
+                            if (verifyData.success) {
+                                unlockDownload();
+                            } else {
+                                setStatus(
+                                    "❌ Payment verification failed. Contact support.",
+                                    "error"
+                                );
+                                payButton.disabled = false;
+                            }
+                        } catch (err) {
+                            setStatus(`❌ Verification error: ${err.message}`, "error");
+                            payButton.disabled = false;
+                        }
+                    },
+
+                    modal: {
+                        ondismiss: function () {
+                            setStatus("Payment cancelled.");
+                            payButton.disabled = false;
+                        }
+                    },
+
+                    theme: {
+                        color: "#111111"
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+
+                // Payment failure event
+                rzp.on("payment.failed", function (response) {
+                    setStatus(
+                        `❌ Payment failed: ${response.error.description}`,
+                        "error"
+                    );
+                    payButton.disabled = false;
+                });
+
+                rzp.open();
+
+            } catch (err) {
+                setStatus(`❌ ${err.message}`, "error");
+                payButton.disabled = false;
+            }
+        });
+    </script>
 
 </body>
 </html>
