@@ -103,11 +103,11 @@
 
         <h1>HoldMyWork</h1>
 
-        <p id="subtitle">Pay ₹3to unlock your download.</p>
+        <p id="subtitle">Pay ₹1 to unlock your download.</p>
 
         <!-- Pay Button (visible initially) -->
         <button id="pay-button" class="btn">
-            💳 Pay ₹3
+            💳 Payyyy ₹1
         </button>
 
         <!-- Download Button (hidden until payment verified) -->
@@ -116,7 +116,7 @@
             class="btn download-btn ready hidden"
             href="https://api.holdmywork.com/download"
             download>
-            ⬇ Download Tooool
+            ⬇ Download Tool
         </a>
 
         <div id="status" class="status"></div>
@@ -134,8 +134,8 @@
         // Razorpay public key ID (safe to expose)
         const RAZORPAY_KEY_ID = "rzp_test_TezJSZDm1DT6Kt";
 
-        // Price in paise (₹3= 3* 100)
-        const AMOUNT_PAISE = 300;
+        // Price in paise (₹1 = 100 paise — Razorpay minimum)
+        const AMOUNT_PAISE = 100;
 
         // ================================================
         // ELEMENTS
@@ -194,7 +194,7 @@
                     throw new Error(orderData.error || "Failed to create order");
                 }
 
-                // -------- STEP 3: Open Razorpay modal --------
+                // -------- STEP 2: Open Razorpay modal --------
                 const options = {
                     key: RAZORPAY_KEY_ID,
                     amount: orderData.amount,
