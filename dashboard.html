@@ -1,218 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>HoldMyWork Dashboard</title>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: #f7fafd;
-            min-height: 100vh;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            color: #0a2540;
-        }
-
-        .header {
-            background: white;
-            padding: 1.2rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .logo {
-            font-size: 1.4rem;
-            font-weight: 700;
-        }
-
-        .user {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user img {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-        }
-
-        .logout {
-            border: none;
-            background: #eef3f8;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 50px auto;
-            padding: 20px;
-        }
-
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            color: #60758a;
-            margin-bottom: 40px;
-        }
-
-        .dashboard-card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-            text-align: center;
-        }
-
-        .download-btn {
-            display: inline-block;
-            margin-top: 25px;
-            padding: 14px 28px;
-            background: #0a2540;
-            color: white;
-            text-decoration: none;
-            border-radius: 30px;
-            font-weight: 600;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HoldMyWork Dashboard</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7fafd;color:#0a2540;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+header{height:76px;background:#fff;border-bottom:1px solid #e5ebf1;display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.logo{font-size:24px;font-weight:750}.user{display:flex;align-items:center;gap:10px}.user img{width:38px;height:38px;border-radius:50%}.logout,.clear,.step button{border:1px solid #dbe4ec;background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer}
+main{max-width:1250px;margin:28px auto;padding:0 20px}.title{margin-bottom:22px}.title h1{margin:0;font-size:28px}.title p{margin:5px 0;color:#738597}
+.builder{display:grid;grid-template-columns:230px 1fr;gap:18px}.panel{background:#fff;border:1px solid #e1e8ef;border-radius:18px;box-shadow:0 8px 25px #0014320b;padding:18px}
+.label{font-size:12px;font-weight:800;letter-spacing:.08em;color:#83919f}.hint{font-size:13px;color:#8997a5;margin:5px 0 14px}
+.tool{width:100%;height:66px;margin-bottom:9px;background:#fff;border:1px solid #dfe7ee;border-radius:12px;display:flex;align-items:center;gap:13px;padding:0 14px;cursor:pointer;text-align:left}
+.tool:hover{background:#f7fafc;border-color:#aac0d3}.tool i{font-style:normal;font-size:28px}.tool b{font-size:14px}.tool small{display:block;color:#8795a3;margin-top:2px}
+.workspace{padding:18px}.workhead{display:flex;justify-content:space-between}.pipeline{min-height:450px;max-height:570px;overflow:auto;background:#fafcff;border:1px dashed #d7e2eb;border-radius:14px;padding:13px}
+.empty{height:420px;display:flex;align-items:center;justify-content:center;text-align:center;color:#98a6b3}
+.step{display:grid;grid-template-columns:28px 48px 1fr auto;gap:10px;align-items:center;min-height:78px;background:#fff;border:1px solid #dfe7ee;border-radius:13px;padding:11px;margin-bottom:8px;cursor:grab}
+.step.dragging{opacity:.45}.handle{color:#9aa8b4;font-size:20px}.icon{font-size:29px;text-align:center}.name{font-weight:700}.detail{font-size:12px;color:#7d8c9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}.actions{display:flex;align-items:center;gap:5px}.actions button{width:32px;height:30px;padding:0}.delay{display:flex;align-items:center;gap:4px}.delay input{width:70px;height:30px;border:1px solid #dbe4ec;border-radius:8px;padding:0 7px}.delay span{font-size:11px;color:#8795a3}.drop{height:65px;border:1px dashed #cbd8e4;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#99a6b2}
+.bottom{display:flex;justify-content:space-between;align-items:center;margin-top:15px}.download,.build{border:0;border-radius:999px;padding:13px 21px;font-weight:700;cursor:pointer;text-decoration:none}.download{background:#0a2540;color:#fff}.build{background:#fff;border:1px solid #d5e0e9;color:#0a2540}.download:hover{background:#143d66}
+@media(max-width:850px){.builder{grid-template-columns:1fr}.toolbox{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tool{margin:0}.label,.hint{grid-column:1/-1}}
+@media(max-width:600px){header{padding:0 14px}.user span{display:none}.step{grid-template-columns:24px 38px 1fr}.actions{grid-column:3}}
+</style>
 </head>
-
 <body>
+<header><div class="logo">HoldMyWork</div><div class="user"><img id="pic" alt=""><span id="uname"></span><button class="logout" onclick="logout()">Logout</button></div></header>
 
-    <header class="header">
+<main>
+<div class="title"><h1>Automation Dashboard</h1><p>Build your automation pipeline.</p></div>
+<div class="builder">
 
-        <div class="logo">
-            HoldMyWork
-        </div>
+<aside class="panel toolbox">
+<div class="label">BUILDING BLOCKS</div><div class="hint">Click an icon to add.</div>
+<button class="tool" onclick="add('Browser')"><i>🌐</i><span><b>Browser</b><small>Launch Chrome / URL</small></span></button>
+<button class="tool" onclick="add('Mouse')"><i>🖱</i><span><b>Mouse</b><small>Click at X / Y</small></span></button>
+<button class="tool" onclick="keyboard()"><i>⌨</i><span><b>Keyboard</b><small>Keys & combinations</small></span></button>
+<button class="tool" onclick="add('Typing')"><i>✍</i><span><b>Typing</b><small>Type text slowly</small></span></button>
+<button class="tool" onclick="add('App')"><i>📱</i><span><b>App</b><small>Launch application</small></span></button>
+</aside>
 
-        <div class="user">
+<section class="panel workspace">
+<div class="workhead"><div><div class="label">YOUR AUTOMATION PIPELINE</div><div class="hint">Drag the handle to reorder. Edit, copy or delete.</div></div><button class="clear" onclick="clearAll()">Clear all</button></div>
+<div id="pipeline" class="pipeline"></div>
+<div class="bottom"><button class="build" onclick="buildExe()">⚙ Build EXE</button><a class="download" href="https://api.holdmywork.com/download">⬇ Download HoldMyWork.exe</a></div>
+</section>
+</div>
+</main>
 
-            <img id="user-picture" src="" alt="">
+<script>
+const API="https://api.holdmywork.com", icons={Browser:"🌐",Mouse:"🖱",Keyboard:"⌨",Typing:"✍",App:"📱"};
+let pipe=[],drag=-1;
+const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const detail=s=>s.type==="Browser"?(s.data.url||"Launch Chrome"):s.type==="Mouse"?`${s.data.action} · X: ${s.data.x} · Y: ${s.data.y}`:s.type==="Typing"?s.data.text:s.type==="Keyboard"?s.data.display:s.data.path;
 
-            <span id="user-name"></span>
-
-            <button class="logout" onclick="logout()">
-                Logout
-            </button>
-
-        </div>
-
-    </header>
-
-
-    <div class="container">
-
-        <h1>Automation Dashboard</h1>
-
-        <p class="subtitle">
-            Create and manage your work automations.
-        </p>
-
-
-        <div class="dashboard-card">
-
-            <h2>HoldMyWork</h2>
-
-            <p style="margin-top: 10px; color: #60758a;">
-                Your automation dashboard will appear here.
-            </p>
-
-            <a
-                class="download-btn"
-                href="https://api.holdmywork.com/download"
-            >
-                ⬇ Download HoldMyWork
-            </a>
-
-        </div>
-
-    </div>
-
-
-    <script>
-
-        async function checkLogin() {
-
-            try {
-
-                const response = await fetch(
-                    "https://api.holdmywork.com/auth/me",
-                    {
-                        method: "GET",
-                        credentials: "include"
-                    }
-                );
-
-                if (!response.ok) {
-
-                    window.location.href = "/";
-
-                    return;
-                }
-
-                const data = await response.json();
-
-                if (!data.loggedIn) {
-
-                    window.location.href = "/";
-
-                    return;
-                }
-
-                document.getElementById("user-name").textContent =
-                    data.name;
-
-                document.getElementById("user-picture").src =
-                    data.picture;
-
-            } catch (error) {
-
-                console.error(error);
-
-                window.location.href = "/";
-
-            }
-        }
-
-
-        async function logout() {
-
-            try {
-
-                await fetch(
-                    "https://api.holdmywork.com/auth/logout",
-                    {
-                        method: "POST",
-                        credentials: "include"
-                    }
-                );
-
-            } finally {
-
-                window.location.href = "/";
-
-            }
-        }
-
-
-        // Check login immediately
-        checkLogin();
-
-    </script>
-
+async function auth(){
+ try{let r=await fetch(API+"/auth/me",{credentials:"include"});if(!r.ok)throw 0;let d=await r.json();if(!d.loggedIn)throw 0;
+ document.getElementById("uname").textContent=d.name||d.email;document.getElementById("pic").src=d.picture||""}
+ catch(e){location.href="/"}
+}
+async function logout(){await fetch(API+"/auth/logout",{method:"POST",credentials:"include"}).catch(()=>{});location.href="/"}
+function render(){
+ let e=document.getElementById("pipeline");
+ if(!pipe.length){e.innerHTML='<div class="empty"><div><div style="font-size:32px">↘</div><b>Your pipeline is empty</b><br>Click a building block to start.</div></div>';return}
+ e.innerHTML=pipe.map((s,i)=>`<div class="step" draggable="true" data-i="${i}" ondragstart="drag=${i}" ondragover="event.preventDefault()" ondrop="drop(event,${i})">
+ <div class="handle">☷</div><div class="icon">${icons[s.type]}</div><div><div class="name">${esc(s.type)}</div><div class="detail" title="${esc(detail(s))}">${esc(detail(s))}</div></div>
+ <div class="actions">${i<pipe.length-1?`<div class="delay">⏱<input type="number" min="0" value="${s.delay||0}" onchange="pipe[${i}].delay=Number(this.value)||0"><span>ms</span></div>`:""}
+ <button onclick="edit(${i})">✎</button><button onclick="copy(${i})">⧉</button><button onclick="del(${i})">✕</button></div></div>`).join("")+
+ '<div class="drop">Drop here to add to the end</div>';
+}
+function add(type){
+ let d={};
+ if(type==="Browser"){let v=prompt("Enter URL. Leave empty to simply launch Chrome.","");if(v===null)return;d={url:v}}
+ if(type==="Mouse"){let v=prompt("Enter X and Y coordinates separated by a space.\nExample: 720 1333","720 1333");if(v===null)return;let p=v.trim().split(/\s+/);if(p.length<2||!/^\d+$/.test(p[0])||!/^\d+$/.test(p[1]))return alert("Invalid coordinates.");let a=prompt("Click action: Left Click, Right Click, or Middle Click.","Left Click");if(a===null)return;d={x:+p[0],y:+p[1],action:a}}
+ if(type==="Typing"){let v=prompt("Enter the text to type. Each character is delayed by 100 ms.","");if(v===null||v==="")return;d={text:v}}
+ if(type==="App"){let v=prompt("Enter the full application path.","C:\\Windows\\System32\\notepad.exe");if(!v)return;d={path:v}}
+ pipe.push({type,data:d,delay:0});render();
+}
+function keyboard(){
+ let mods=["Ctrl","Alt","Shift"], keys=["Tab","Enter","Esc","Backspace","Delete","Space","Up","Down","Left","Right","Home","End","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12",..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")];
+ let m=prompt("Keyboard shortcut.\nExamples: Ctrl+C, Ctrl+V, Tab, Shift+Delete","Ctrl+C");if(m===null||!m)return;
+ let display=m.trim(), token=display;
+ let parts=display.split("+"), main=parts.pop();
+ let prefix=parts.map(x=>x==="Ctrl"?"^":x==="Alt"?"%":x==="Shift"?"+":"").join("");
+ const special={Tab:"{TAB}",Enter:"{ENTER}",Esc:"{ESC}",Backspace:"{BACKSPACE}",Delete:"{DELETE}",Space:" ",Up:"{UP}",Down:"{DOWN}",Left:"{LEFT}",Right:"{RIGHT}",Home:"{HOME}",End:"{END}"};
+ let mt=special[main]||(/F\d+/.test(main)?"{"+main+"}":main.toLowerCase());
+ token=prefix+mt;pipe.push({type:"Keyboard",data:{key:token,display},delay:0});render();
+}
+function edit(i){
+ let s=pipe[i],v;
+ if(s.type==="Browser"){v=prompt("Enter URL.",s.data.url||"");if(v===null)return;s.data.url=v}
+ else if(s.type==="Mouse"){v=prompt("Enter X and Y.",`${s.data.x} ${s.data.y}`);if(v===null)return;let p=v.trim().split(/\s+/);if(p.length<2)return alert("Invalid coordinates.");s.data.x=+p[0];s.data.y=+p[1];v=prompt("Click action.",s.data.action);if(v===null)return;s.data.action=v}
+ else if(s.type==="Typing"){v=prompt("Enter text.",s.data.text||"");if(v===null)return;s.data.text=v}
+ else if(s.type==="App"){v=prompt("Enter application path.",s.data.path||"");if(v===null)return;s.data.path=v}
+ else {v=prompt("Enter keyboard combination.",s.data.display||"Ctrl+C");if(v===null)return;s.data.display=v;s.data.key=v}
+ render();
+}
+function copy(i){pipe.splice(i+1,0,JSON.parse(JSON.stringify(pipe[i])));render()}
+function del(i){pipe.splice(i,1);render()}
+function clearAll(){if(pipe.length&&!confirm("Clear the entire pipeline?"))return;pipe=[];render()}
+function drop(e,to){e.preventDefault();if(drag<0||drag===to)return;let x=pipe.splice(drag,1)[0];if(drag<to)to--;pipe.splice(to,0,x);drag=-1;render()}
+function buildExe(){alert("The dashboard UI is ready. The next step is connecting this pipeline data to the EXE generator so the exact pipeline can be converted into a Windows .exe.")}
+auth();render();
+</script>
 </body>
 </html>
