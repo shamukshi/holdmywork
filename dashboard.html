@@ -26,16 +26,16 @@
 
         .card {
             background: white;
-            width: 420px;
+            width: 430px;
             padding: 45px;
-            border-radius: 20px;
+            border-radius: 30px;
             text-align: center;
             box-shadow: 0 10px 35px rgba(0,0,0,0.08);
         }
 
         h1 {
             margin-bottom: 10px;
-            color: #222;
+            color: #333;
         }
 
         p {
@@ -54,12 +54,12 @@
             font-weight: bold;
             cursor: pointer;
             border: none;
-            transition: 0.2s;
+            transition: 0.3s;
             width: 100%;
         }
 
         .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             opacity: 0.9;
         }
 
@@ -79,12 +79,12 @@
         .status {
             margin-top: 18px;
             font-size: 14px;
-            min-height: 20px;
+            min-height: 30px;
             color: #666;
         }
 
         .status.error {
-            color: #dc2626;
+            color: #dc3636;
         }
 
         .status.success {
@@ -103,11 +103,11 @@
 
         <h1>HoldMyWork</h1>
 
-        <p id="subtitle">Pay ₹500 to unlock your download.</p>
+        <p id="subtitle">Pay ₹3to unlock your download.</p>
 
         <!-- Pay Button (visible initially) -->
         <button id="pay-button" class="btn">
-            💳 Pay ₹500
+            💳 Pay ₹3
         </button>
 
         <!-- Download Button (hidden until payment verified) -->
@@ -134,8 +134,8 @@
         // Razorpay public key ID (safe to expose)
         const RAZORPAY_KEY_ID = "rzp_test_TezJSZDm1DT6Kt";
 
-        // Price in paise (₹500 = 500 * 100)
-        const AMOUNT_PAISE = 50000;
+        // Price in paise (₹3= 3* 100)
+        const AMOUNT_PAISE = 300;
 
         // ================================================
         // ELEMENTS
@@ -194,7 +194,7 @@
                     throw new Error(orderData.error || "Failed to create order");
                 }
 
-                // -------- STEP 2: Open Razorpay modal --------
+                // -------- STEP 3: Open Razorpay modal --------
                 const options = {
                     key: RAZORPAY_KEY_ID,
                     amount: orderData.amount,
