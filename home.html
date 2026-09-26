@@ -23,7 +23,6 @@
     }
 
     * { box-sizing: border-box; }
-
     html { scroll-behavior: smooth; }
 
     body {
@@ -371,11 +370,8 @@
       }
 
       .workflow-window { justify-self: start; }
-
       .features { padding-inline: max(32px, calc((100% - 800px) / 2)); }
-
       .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
       .site-footer { padding-inline: max(32px, calc((100% - 800px) / 2)); }
     }
 
@@ -389,9 +385,7 @@
       }
 
       .brand { font-size: 19px; }
-
       .brand-mark { width: 34px; height: 34px; }
-
       .account { margin-left: auto; }
 
       .nav-links {
@@ -410,23 +404,15 @@
       }
 
       h1 { font-size: clamp(3rem, 12vw, 4.4rem); }
-
       .hero-description { margin-top: 23px; font-size: 18px; }
-
       .workflow-window { border-width: 9px; border-radius: 28px; }
-
       .workflow-content { padding: 20px 12px 14px; }
-
       .step { min-height: 54px; font-size: 14px; }
 
       .features { padding: 58px 20px; }
-
       .features h2 { margin-bottom: 27px; }
-
       .feature-grid { grid-template-columns: 1fr; gap: 14px; }
-
       .feature-card { min-height: 0; padding: 22px; }
-
       .feature-icon { margin-bottom: 14px; }
 
       .site-footer {
@@ -540,7 +526,6 @@
     </a>
   </footer>
 
-  <!-- Script to personalize the home page from login data -->
   <script>
     (function () {
       const storedName = sessionStorage.getItem("hmw_user_name");
@@ -549,9 +534,7 @@
       const nameEl = document.getElementById("user-name");
       const avatarEl = document.getElementById("user-avatar");
 
-      if (storedName && nameEl) {
-        nameEl.textContent = storedName;
-      }
+      if (storedName && nameEl) nameEl.textContent = storedName;
 
       if (storedInitial && avatarEl) {
         avatarEl.textContent = storedInitial;
