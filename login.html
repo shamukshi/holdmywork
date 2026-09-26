@@ -137,7 +137,6 @@
       letter-spacing: -0.8px;
     }
 
-    /* removed the login-copy block entirely – no margin needed */
     .google-login {
       width: 100%;
       min-height: 60px;
@@ -167,7 +166,7 @@
       align-items: center;
       justify-content: center;
       border: 1.5px solid #e0dde5;
-      border-radius: 999px; /* pill shape matching google outline */
+      border-radius: 999px;
       background: #ffffff;
       color: #3a3748;
       font-family: "Nunito", system-ui, sans-serif;
@@ -212,107 +211,34 @@
     }
 
     @media (max-width: 1000px) {
-      body {
-        padding: 48px 7vw;
-      }
-
-      .layout {
-        max-width: 720px;
-        grid-template-columns: 1fr;
-        gap: 48px;
-      }
-
-      .brand {
-        margin-bottom: 38px;
-      }
-
-      h1 {
-        font-size: clamp(3.3rem, 9vw, 5.2rem);
-      }
-
-      .description {
-        margin: 25px 0 32px;
-      }
-
-      .login-card {
-        min-height: 0;
-        padding: 48px;
-      }
+      body { padding: 48px 7vw; }
+      .layout { max-width: 720px; grid-template-columns: 1fr; gap: 48px; }
+      .brand { margin-bottom: 38px; }
+      h1 { font-size: clamp(3.3rem, 9vw, 5.2rem); }
+      .description { margin: 25px 0 32px; }
+      .login-card { min-height: 0; padding: 48px; }
     }
 
     @media (max-width: 560px) {
-      body {
-        padding: 32px 22px;
-      }
-
-      .layout {
-        gap: 38px;
-      }
-
-      .brand {
-        margin-bottom: 31px;
-        font-size: 23px;
-      }
-
-      h1 {
-        font-size: clamp(2.8rem, 13vw, 4.3rem);
-        letter-spacing: -1.8px;
-      }
-
-      .description {
-        margin: 23px 0 28px;
-        font-size: 1.15rem;
-      }
-
-      .benefits {
-        grid-template-columns: 1fr;
-        gap: 12px;
-      }
-
-      .benefits li {
-        font-size: 1.08rem;
-      }
-
-      .check {
-        flex-basis: 32px;
-        width: 32px;
-        height: 32px;
-        font-size: 18px;
-      }
-
-      .login-card {
-        padding: 36px 25px;
-        border-radius: 26px;
-      }
-
-      .login-card h2 {
-        font-size: 1.75rem;
-      }
-
-      .fine-print {
-        margin-top: 22px;
-      }
-
-      .guest-button {
-        min-height: 52px;
-        font-size: 1rem;
-      }
+      body { padding: 32px 22px; }
+      .layout { gap: 38px; }
+      .brand { margin-bottom: 31px; font-size: 23px; }
+      h1 { font-size: clamp(2.8rem, 13vw, 4.3rem); letter-spacing: -1.8px; }
+      .description { margin: 23px 0 28px; font-size: 1.15rem; }
+      .benefits { grid-template-columns: 1fr; gap: 12px; }
+      .benefits li { font-size: 1.08rem; }
+      .check { flex-basis: 32px; width: 32px; height: 32px; font-size: 18px; }
+      .login-card { padding: 36px 25px; border-radius: 26px; }
+      .login-card h2 { font-size: 1.75rem; }
+      .fine-print { margin-top: 22px; }
+      .guest-button { min-height: 52px; font-size: 1rem; }
     }
 
     @media (prefers-reduced-motion: no-preference) {
-      .login-card {
-        animation: arrive 0.55s ease-out both;
-      }
-
+      .login-card { animation: arrive 0.55s ease-out both; }
       @keyframes arrive {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
     }
   </style>
@@ -320,7 +246,7 @@
 <body>
   <main class="layout">
     <section class="intro" aria-labelledby="hero-title">
-      <a class="brand" href="/" aria-label="HoldMyWork home">HoldMyWork</a>
+      <a class="brand" href="login.html" aria-label="HoldMyWork home">HoldMyWork</a>
 
       <h1 id="hero-title">
         Let HoldMyWork
@@ -332,7 +258,7 @@
       </p>
 
       <ul class="benefits">
-        <li><span class="check" aria-hidden="true">✓</span>Nooo programming required</li>
+        <li><span class="check" aria-hidden="true">✓</span>No!! programming required</li>
         <li><span class="check" aria-hidden="true">✓</span>Keyboard and mouse actions</li>
         <li><span class="check" aria-hidden="true">✓</span>Simple visual workflows</li>
         <li><span class="check" aria-hidden="true">✓</span>Easy to learn and use</li>
@@ -341,8 +267,7 @@
 
     <section class="login-card" aria-labelledby="login-title">
       <h2 id="login-title">Welcome to HoldMyWork</h2>
-      <!-- REMOVED: "Sign in with Google to download the tool and explore how it works." -->
-      
+
       <div class="google-login">
         <div id="g_id_onload"
              data-client_id="697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com"
@@ -353,7 +278,7 @@
         <div id="google-button"></div>
       </div>
 
-      <!-- NEW: "Sign in as guest" button placed right below the Google button -->
+      <!-- "Sign in as guest" button placed right below the Google button -->
       <div class="guest-login">
         <button id="guest-button" class="guest-button" type="button">
           Sign in as guest
@@ -370,6 +295,9 @@
   <script>
     const googleClientId =
       "697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com";
+
+    // >>> The page to open after a successful login <<<
+    const DASHBOARD_URL = "home.html";
 
     function renderGoogleButton() {
       if (!window.google?.accounts?.id) return;
@@ -400,49 +328,55 @@
     window.addEventListener("load", renderGoogleButton);
     window.addEventListener("resize", renderGoogleButton);
 
+    // ----- Google sign-in -----
     async function handleGoogleLogin(response) {
       const status = document.getElementById("login-status");
       status.textContent = "Signing in...";
 
       try {
-        const result = await fetch("https://api.holdmywork.com/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ credential: response.credential })
-        });
+        // Decode the Google JWT (client-side only) to display the user's name
+        let name = "User";
+        let email = "";
 
-        const data = await result.json();
-
-        if (!result.ok || !data.success) {
-          throw new Error("Login failed");
+        try {
+          const payload = JSON.parse(
+            atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+          );
+          if (payload.name) name = payload.name;
+          if (payload.email) email = payload.email;
+        } catch (decodeErr) {
+          console.warn("Could not decode Google credential:", decodeErr);
         }
 
-        status.textContent = "Welcome, " + data.name + "!";
-        window.location.href = "/dashboard.html";
+        // Store for the home page header
+        sessionStorage.setItem("hmw_user_name", name);
+        sessionStorage.setItem("hmw_user_initial", name.charAt(0).toUpperCase());
+        if (email) sessionStorage.setItem("hmw_user_email", email);
+
+        status.textContent = "Welcome, " + name + "!";
+
+        // >>> REDIRECT TO home.html <<<
+        window.location.href = DASHBOARD_URL;
       } catch (error) {
         console.error(error);
         status.textContent = "Google login failed. Please try again.";
       }
     }
 
-    // ----- Guest sign-in handler -----
+    // ----- Guest sign-in -----
     function handleGuestLogin() {
       const status = document.getElementById("login-status");
       status.textContent = "Signing in as guest...";
 
-      // Simulate guest access – you can replace this with an actual API call or redirect
-      // For demonstration, we redirect to dashboard after a short delay.
-      setTimeout(() => {
-        status.textContent = "Welcome, guest!";
-        window.location.href = "/dashboard.html";
-      }, 400);
+      sessionStorage.setItem("hmw_user_name", "Guest");
+      sessionStorage.setItem("hmw_user_initial", "G");
 
-      // Optional: you could also call a real endpoint, e.g.:
-      // fetch('/auth/guest', { method: 'POST', credentials: 'include' })
-      //   .then(res => res.json())
-      //   .then(data => { if (data.success) window.location.href = '/dashboard.html'; })
-      //   .catch(() => { status.textContent = 'Guest login failed.'; });
+      setTimeout(() => {
+        status.textContent = "Welcome, Guest!";
+
+        // >>> REDIRECT TO home.html <<<
+        window.location.href = DASHBOARD_URL;
+      }, 400);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
