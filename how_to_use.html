@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -303,14 +304,14 @@
         <li><a href="home.html">Home</a></li>
         <li><a href="about.html">About the Tool</a></li>
         <li><a class="active" href="how_to_use.html">How to Use</a></li>
-        <li><a href="home.html#pricing">Pricing</a></li>
-        <li><a href="home.html#contact">Contact Us</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="contact_us.html">Contact Us</a></li>
       </ul>
 
       <div class="account" aria-label="Signed-in account">
-        <span class="avatar" id="user-avatar" aria-hidden="true">S</span>
-        <span id="user-name">Shashank Shinde</span>
-        <a class="logout" href="index.html" onclick="sessionStorage.clear()" aria-label="Sign out" title="Sign out">⇥</a>
+        <span class="avatar" aria-hidden="true">S</span>
+        <span>Shashank Shinde</span>
+        <a class="logout" href="#" aria-label="Sign out" title="Sign out">⇥</a>
       </div>
     </nav>
   </header>
@@ -369,19 +370,5 @@
       </div>
     </section>
   </main>
-
-  <script>
-    (function () {
-      const storedName = sessionStorage.getItem("hmw_user_name");
-      const storedInitial = sessionStorage.getItem("hmw_user_initial");
-
-      const nameEl = document.getElementById("user-name");
-      const avatarEl = document.getElementById("user-avatar");
-
-      if (storedName && nameEl) nameEl.textContent = storedName;
-      if (storedInitial && avatarEl) avatarEl.textContent = storedInitial;
-      else if (storedName && avatarEl) avatarEl.textContent = storedName.charAt(0).toUpperCase();
-    })();
-  </script>
 </body>
 </html>
