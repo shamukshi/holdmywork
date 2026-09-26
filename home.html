@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fff6e9">
+  <title>HoldMyWork · simple automation tool</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --cream: #fff6e9;
+      --ink: #1d1930;
+      --muted: #777383;
+      --orange: #ff512d;
+      --yellow: #ffca21;
+      --dark: #1d182d;
+      --card: #292438;
+      --line: rgba(255, 255, 255, .13);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--cream);
+      font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    a { color: inherit; }
+
+    .site-header {
+      height: 76px;
+      border-bottom: 1px solid rgba(29, 25, 48, .12);
+      background: var(--cream);
+    }
+
+    .nav {
+      width: min(100% - 64px, 1470px);
+      height: 100%;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-size: 21px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .brand-mark, .footer-mark {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--orange);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(15px, 2.2vw, 38px);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-links a {
+      display: block;
+      padding: 9px 13px;
+      border-radius: 22px;
+      color: #514d5d;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background .2s ease, color .2s ease;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: #55431a;
+      background: #ffdf7a;
+    }
+
+    .account {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #514d5d;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #e7d3bd;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .logout {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 19px;
+    }
+
+    .hero {
+      width: min(100% - 64px, 1470px);
+      min-height: 665px;
+      margin: auto;
+      padding: 72px 0 76px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: clamp(50px, 9vw, 150px);
+    }
+
+    .hero-copy { max-width: 600px; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 28px;
+      padding: 8px 16px;
+      border-radius: 100px;
+      background: var(--yellow);
+      color: #251c19;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .eyebrow::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--orange);
+      content: "";
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(3.4rem, 6vw, 5.2rem);
+      line-height: .99;
+      letter-spacing: -2.5px;
+      font-weight: 900;
+    }
+
+    h1 span {
+      display: block;
+      color: var(--orange);
+    }
+
+    .hero-description {
+      margin: 32px 0 0;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1.65;
+    }
+
+    .workflow-window {
+      width: min(100%, 600px);
+      justify-self: end;
+      padding: 13px;
+      border: 13px solid var(--ink);
+      border-radius: 38px;
+      background: #fff;
+      box-shadow: 0 24px 54px rgba(44, 31, 24, .15);
+    }
+
+    .window-top {
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      background: #f4ecdf;
+      border-radius: 13px 13px 0 0;
+    }
+
+    .window-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+    }
+
+    .window-dot.red { background: #ff5a43; }
+    .window-dot.yellow { background: #ffc928; }
+    .window-dot.green { background: #00c99a; }
+
+    .workflow-content {
+      padding: 26px 20px 20px;
+      background: #fffaf2;
+      border-radius: 0 0 14px 14px;
+    }
+
+    .workflow-content h2 {
+      margin: 0 0 21px;
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .step {
+      min-height: 61px;
+      margin-top: 10px;
+      padding: 0 15px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      border: 1px solid #ece9e5;
+      border-radius: 23px;
+      background: #fff;
+      color: #29263a;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .step-number {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #fff1c5;
+      font-weight: 800;
+    }
+
+    .step-icon { font-size: 17px; }
+
+    .features {
+      padding: 76px max(32px, calc((100% - 1470px) / 2)) 82px;
+      background: var(--dark);
+      color: #fff;
+    }
+
+    .section-kicker {
+      margin: 0 0 8px;
+      color: var(--yellow);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .features h2 {
+      margin: 0 0 38px;
+      font-size: clamp(2rem, 3.4vw, 2.8rem);
+      line-height: 1.15;
+      letter-spacing: -.7px;
+      font-weight: 900;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    .feature-card {
+      min-height: 210px;
+      padding: 25px;
+      border: 2px solid var(--line);
+      border-radius: 28px;
+      background: var(--card);
+    }
+
+    .feature-icon {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 19px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--yellow);
+      color: var(--dark);
+      font-size: 22px;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 9px;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: #c8c5d1;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .site-footer {
+      min-height: 100px;
+      padding: 20px max(32px, calc((100% - 1470px) / 2));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      border-top: 1px solid var(--line);
+      background: var(--dark);
+      color: #fff;
+    }
+
+    .footer-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .footer-mark {
+      width: 36px;
+      height: 36px;
+      font-size: 17px;
+    }
+
+    .footer-tagline {
+      color: #c8c5d1;
+      font-size: 14px;
+    }
+
+    .footer-email {
+      color: var(--yellow);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 1050px) {
+      .nav { width: min(100% - 40px, 800px); }
+      .nav-links { gap: 5px; }
+      .nav-links a { padding-inline: 9px; }
+
+      .hero {
+        width: min(100% - 64px, 800px);
+        min-height: 0;
+        padding: 90px 0;
+        grid-template-columns: 1fr;
+        gap: 56px;
+      }
+
+      .workflow-window { justify-self: start; }
+      .features { padding-inline: max(32px, calc((100% - 800px) / 2)); }
+      .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .site-footer { padding-inline: max(32px, calc((100% - 800px) / 2)); }
+    }
+
+    @media (max-width: 720px) {
+      .site-header { height: auto; }
+
+      .nav {
+        padding: 18px 0;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+
+      .brand { font-size: 19px; }
+      .brand-mark { width: 34px; height: 34px; }
+      .account { margin-left: auto; }
+
+      .nav-links {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+        overflow-x: auto;
+      }
+
+      .nav-links a { font-size: 13px; }
+
+      .hero {
+        width: min(100% - 40px, 560px);
+        padding: 66px 0;
+        gap: 40px;
+      }
+
+      h1 { font-size: clamp(3rem, 12vw, 4.4rem); }
+      .hero-description { margin-top: 23px; font-size: 18px; }
+      .workflow-window { border-width: 9px; border-radius: 28px; }
+      .workflow-content { padding: 20px 12px 14px; }
+      .step { min-height: 54px; font-size: 14px; }
+
+      .features { padding: 58px 20px; }
+      .features h2 { margin-bottom: 27px; }
+      .feature-grid { grid-template-columns: 1fr; gap: 14px; }
+      .feature-card { min-height: 0; padding: 22px; }
+      .feature-icon { margin-bottom: 14px; }
+
+      .site-footer {
+        padding: 24px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 17px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="home.html">
+        <span class="brand-mark" aria-hidden="true">H</span>
+        <span>HoldMyWork</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a class="active" href="home.html">Home</a></li>
+        <li><a href="about.html">About the Tool</a></li>
+        <li><a href="#how-to-use">How to Use</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#contact">Contact Us</a></li>
+      </ul>
+
+      <div class="account" aria-label="Signed-in account">
+        <span class="avatar" aria-hidden="true" id="user-avatar">S</span>
+        <span id="user-name">Shashank Shinde</span>
+        <a class="logout" href="index.html" onclick="sessionStorage.clear()" aria-label="Sign out" title="Sign out">⇥</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="home" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">Your simple automation tool</p>
+        <h1 id="hero-title">Welcome to <span>HoldMyWork</span></h1>
+        <p class="hero-description">
+          Automate repetitive work without writing code.
+        </p>
+      </div>
+
+      <div class="workflow-window" id="how-to-use" aria-label="Example automation workflow">
+        <div class="window-top" aria-hidden="true">
+          <span class="window-dot red"></span>
+          <span class="window-dot yellow"></span>
+          <span class="window-dot green"></span>
+        </div>
+
+        <div class="workflow-content">
+          <h2>A simple workflow</h2>
+          <div class="step"><span class="step-number">1</span><span><span class="step-icon">🌐</span> Open browser</span></div>
+          <div class="step"><span class="step-number">2</span><span><span class="step-icon">◷</span> Wait</span></div>
+          <div class="step"><span class="step-number">3</span><span><span class="step-icon">☝</span> Click</span></div>
+          <div class="step"><span class="step-number">4</span><span><span class="step-icon">✍️</span> Type text</span></div>
+          <div class="step"><span class="step-number">5</span><span><span class="step-icon">⌨</span> Press Enter</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="about" aria-labelledby="features-title">
+      <p class="section-kicker">Why HoldMyWork?</p>
+      <h2 id="features-title">Less repetition. More useful time.</h2>
+
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true">♧</span>
+          <h3>Simple visual automation</h3>
+          <p>Build clear workflows using familiar action icons.</p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true">♙</span>
+          <h3>No programming required</h3>
+          <p>Create useful automations without learning code.</p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true">▦</span>
+          <h3>Keyboard and mouse actions</h3>
+          <p>Automate the same clicks and keystrokes you already use.</p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true">➤</span>
+          <h3>Designed for everyday operators</h3>
+          <p>Friendly tools for people who simply want work done.</p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true">⇄</span>
+          <h3>Automate repetitive tasks</h3>
+          <p>Hand over routine computer work and focus on what matters.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="contact">
+    <a class="footer-brand" href="home.html">
+      <span class="footer-mark" aria-hidden="true">H</span>
+      <span>HoldMyWork</span>
+    </a>
+
+    <p class="footer-tagline">Let HoldMyWork handle the work.</p>
+    <a class="footer-email" href="mailto:support@holdmywork.com">
+      support@holdmywork.com
+    </a>
+  </footer>
+
+  <script>
+    (function () {
+      const storedName = sessionStorage.getItem("hmw_user_name");
+      const storedInitial = sessionStorage.getItem("hmw_user_initial");
+
+      const nameEl = document.getElementById("user-name");
+      const avatarEl = document.getElementById("user-avatar");
+
+      if (storedName && nameEl) nameEl.textContent = storedName;
+
+      if (storedInitial && avatarEl) {
+        avatarEl.textContent = storedInitial;
+      } else if (storedName && avatarEl) {
+        avatarEl.textContent = storedName.charAt(0).toUpperCase();
+      }
+    })();
+  </script>
+</body>
+</html>
