@@ -9,7 +9,6 @@
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Rounded font close to the reference design -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -48,9 +47,7 @@
       gap: clamp(56px, 8vw, 132px);
     }
 
-    .intro {
-      min-width: 0;
-    }
+    .intro { min-width: 0; }
 
     .brand {
       display: inline-block;
@@ -150,7 +147,6 @@
       justify-content: center;
     }
 
-    /* guest button styling – subtle, matches card aesthetics */
     .guest-login {
       width: 100%;
       margin-top: 24px;
@@ -258,7 +254,7 @@
       </p>
 
       <ul class="benefits">
-        <li><span class="check" aria-hidden="true">✓</span>No!! programming required</li>
+        <li><span class="check" aria-hidden="true">✓</span>Nooo programming required</li>
         <li><span class="check" aria-hidden="true">✓</span>Keyboard and mouse actions</li>
         <li><span class="check" aria-hidden="true">✓</span>Simple visual workflows</li>
         <li><span class="check" aria-hidden="true">✓</span>Easy to learn and use</li>
@@ -278,7 +274,6 @@
         <div id="google-button"></div>
       </div>
 
-      <!-- "Sign in as guest" button placed right below the Google button -->
       <div class="guest-login">
         <button id="guest-button" class="guest-button" type="button">
           Sign in as guest
@@ -296,7 +291,7 @@
     const googleClientId =
       "697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com";
 
-    // >>> The page to open after a successful login <<<
+    // >>> Redirect target after successful login <<<
     const DASHBOARD_URL = "home.html";
 
     function renderGoogleButton() {
@@ -334,7 +329,6 @@
       status.textContent = "Signing in...";
 
       try {
-        // Decode the Google JWT (client-side only) to display the user's name
         let name = "User";
         let email = "";
 
@@ -348,14 +342,13 @@
           console.warn("Could not decode Google credential:", decodeErr);
         }
 
-        // Store for the home page header
         sessionStorage.setItem("hmw_user_name", name);
         sessionStorage.setItem("hmw_user_initial", name.charAt(0).toUpperCase());
         if (email) sessionStorage.setItem("hmw_user_email", email);
 
         status.textContent = "Welcome, " + name + "!";
 
-        // >>> REDIRECT TO home.html <<<
+        // Redirect to home.html
         window.location.href = DASHBOARD_URL;
       } catch (error) {
         console.error(error);
@@ -373,8 +366,7 @@
 
       setTimeout(() => {
         status.textContent = "Welcome, Guest!";
-
-        // >>> REDIRECT TO home.html <<<
+        // Redirect to home.html
         window.location.href = DASHBOARD_URL;
       }, 400);
     }
