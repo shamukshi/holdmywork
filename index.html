@@ -137,14 +137,7 @@
       letter-spacing: -0.8px;
     }
 
-    .login-copy {
-      margin-bottom: 34px;
-      color: #858391;
-      font-size: 1.25rem;
-      font-weight: 500;
-      line-height: 1.55;
-    }
-
+    /* removed the login-copy block entirely – no margin needed */
     .google-login {
       width: 100%;
       min-height: 60px;
@@ -158,9 +151,53 @@
       justify-content: center;
     }
 
+    /* guest button styling – subtle, matches card aesthetics */
+    .guest-login {
+      width: 100%;
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .guest-button {
+      width: 100%;
+      min-height: 58px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid #e0dde5;
+      border-radius: 999px; /* pill shape matching google outline */
+      background: #ffffff;
+      color: #3a3748;
+      font-family: "Nunito", system-ui, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .guest-button:hover {
+      background: #faf8fd;
+      border-color: #cbc7d4;
+      box-shadow: 0 4px 10px rgba(64, 46, 28, 0.06);
+    }
+
+    .guest-button:active {
+      background: #f3f0f8;
+      border-color: #b8b3c2;
+    }
+
+    .guest-button:focus-visible {
+      outline: 3px solid rgba(0, 184, 155, 0.4);
+      outline-offset: 2px;
+    }
+
     #login-status {
       min-height: 22px;
-      margin-top: 12px;
+      margin-top: 18px;
       color: var(--muted);
       font-size: 0.95rem;
       text-align: center;
@@ -252,13 +289,13 @@
         font-size: 1.75rem;
       }
 
-      .login-copy {
-        margin-bottom: 25px;
-        font-size: 1.08rem;
-      }
-
       .fine-print {
         margin-top: 22px;
+      }
+
+      .guest-button {
+        min-height: 52px;
+        font-size: 1rem;
       }
     }
 
@@ -304,10 +341,8 @@
 
     <section class="login-card" aria-labelledby="login-title">
       <h2 id="login-title">Welcome to HoldMyWork</h2>
-      <p class="login-copy">
-        Sign in with Google to download the tool and explore how it works.
-      </p>
-
+      <!-- REMOVED: "Sign in with Google to download the tool and explore how it works." -->
+      
       <div class="google-login">
         <div id="g_id_onload"
              data-client_id="697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com"
@@ -316,6 +351,13 @@
              data-ux_mode="popup">
         </div>
         <div id="google-button"></div>
+      </div>
+
+      <!-- NEW: "Sign in as guest" button placed right below the Google button -->
+      <div class="guest-login">
+        <button id="guest-button" class="guest-button" type="button">
+          Sign in as guest
+        </button>
       </div>
 
       <p id="login-status" role="status" aria-live="polite"></p>
@@ -383,6 +425,32 @@
         status.textContent = "Google login failed. Please try again.";
       }
     }
+
+    // ----- Guest sign-in handler -----
+    function handleGuestLogin() {
+      const status = document.getElementById("login-status");
+      status.textContent = "Signing in as guest...";
+
+      // Simulate guest access – you can replace this with an actual API call or redirect
+      // For demonstration, we redirect to dashboard after a short delay.
+      setTimeout(() => {
+        status.textContent = "Welcome, guest!";
+        window.location.href = "/dashboard.html";
+      }, 400);
+
+      // Optional: you could also call a real endpoint, e.g.:
+      // fetch('/auth/guest', { method: 'POST', credentials: 'include' })
+      //   .then(res => res.json())
+      //   .then(data => { if (data.success) window.location.href = '/dashboard.html'; })
+      //   .catch(() => { status.textContent = 'Guest login failed.'; });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const guestBtn = document.getElementById("guest-button");
+      if (guestBtn) {
+        guestBtn.addEventListener("click", handleGuestLogin);
+      }
+    });
   </script>
 </body>
 </html>
