@@ -1,180 +1,388 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fff6e9">
+  <title>HoldMyWork · autopilot for your work</title>
 
-    <title>HoldMyWork · autopilot for your work</title>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Rounded font close to the reference design -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+  <style>
+    :root {
+      --background: #fff6e9;
+      --ink: #1e1a32;
+      --muted: #686575;
+      --orange: #ff512d;
+      --mint: #d9f0e1;
+      --teal: #00b89b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: clamp(28px, 6vw, 88px);
+      display: grid;
+      place-items: center;
+      background: var(--background);
+      color: var(--ink);
+      font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    .layout {
+      width: min(100%, 1450px);
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(420px, 0.92fr);
+      align-items: center;
+      gap: clamp(56px, 8vw, 132px);
+    }
+
+    .intro {
+      min-width: 0;
+    }
+
+    .brand {
+      display: inline-block;
+      margin-bottom: 62px;
+      color: var(--ink);
+      font-size: 27px;
+      font-weight: 900;
+      letter-spacing: -0.7px;
+      text-decoration: none;
+    }
+
+    h1 {
+      max-width: 790px;
+      font-size: clamp(3.55rem, 5.2vw, 5.3rem);
+      font-weight: 900;
+      line-height: 1.02;
+      letter-spacing: -2.8px;
+    }
+
+    h1 span {
+      display: block;
+      color: var(--orange);
+    }
+
+    .description {
+      max-width: 710px;
+      margin: 37px 0 47px;
+      color: var(--muted);
+      font-size: clamp(1.2rem, 1.65vw, 1.65rem);
+      font-weight: 500;
+      line-height: 1.58;
+    }
+
+    .benefits {
+      max-width: 720px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 24px;
+      list-style: none;
+    }
+
+    .benefits li {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      color: #565362;
+      font-size: 1.25rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .check {
+      flex: 0 0 36px;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--mint);
+      color: var(--teal);
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .login-card {
+      min-height: 464px;
+      padding: clamp(40px, 4.8vw, 75px) clamp(32px, 4vw, 60px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1px solid #e6e3e9;
+      border-radius: 35px;
+      background: #fff;
+      box-shadow:
+        0 28px 65px rgba(64, 46, 28, 0.13),
+        0 0 0 1px rgba(30, 26, 50, 0.04);
+    }
+
+    .login-card h2 {
+      margin-bottom: 13px;
+      font-size: clamp(1.8rem, 2.2vw, 2.25rem);
+      font-weight: 900;
+      line-height: 1.2;
+      letter-spacing: -0.8px;
+    }
+
+    .login-copy {
+      margin-bottom: 34px;
+      color: #858391;
+      font-size: 1.25rem;
+      font-weight: 500;
+      line-height: 1.55;
+    }
+
+    .google-login {
+      width: 100%;
+      min-height: 60px;
+      display: flex;
+      justify-content: center;
+    }
+
+    #google-button {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    #login-status {
+      min-height: 22px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .fine-print {
+      margin-top: 30px;
+      color: #a3a1ad;
+      font-size: 0.94rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (max-width: 1000px) {
+      body {
+        padding: 48px 7vw;
+      }
+
+      .layout {
+        max-width: 720px;
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      .brand {
+        margin-bottom: 38px;
+      }
+
+      h1 {
+        font-size: clamp(3.3rem, 9vw, 5.2rem);
+      }
+
+      .description {
+        margin: 25px 0 32px;
+      }
+
+      .login-card {
+        min-height: 0;
+        padding: 48px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 32px 22px;
+      }
+
+      .layout {
+        gap: 38px;
+      }
+
+      .brand {
+        margin-bottom: 31px;
+        font-size: 23px;
+      }
+
+      h1 {
+        font-size: clamp(2.8rem, 13vw, 4.3rem);
+        letter-spacing: -1.8px;
+      }
+
+      .description {
+        margin: 23px 0 28px;
+        font-size: 1.15rem;
+      }
+
+      .benefits {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .benefits li {
+        font-size: 1.08rem;
+      }
+
+      .check {
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+      }
+
+      .login-card {
+        padding: 36px 25px;
+        border-radius: 26px;
+      }
+
+      .login-card h2 {
+        font-size: 1.75rem;
+      }
+
+      .login-copy {
+        margin-bottom: 25px;
+        font-size: 1.08rem;
+      }
+
+      .fine-print {
+        margin-top: 22px;
+      }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .login-card {
+        animation: arrive 0.55s ease-out both;
+      }
+
+      @keyframes arrive {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
         }
-
-        body {
-            background: #f7fafd;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            padding: 1.5rem;
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
-
-        .card {
-            max-width: 620px;
-            width: 100%;
-            background: #ffffff;
-            border-radius: 2rem;
-            padding: 3rem 2.5rem;
-            box-shadow:
-                0 15px 35px -10px rgba(0, 20, 50, 0.1),
-                0 0 0 1px rgba(0, 0, 0, 0.02);
-            text-align: center;
-        }
-
-        h1 {
-            font-size: 2.6rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            color: #0a2540;
-            margin-bottom: 0.75rem;
-            line-height: 1.2;
-        }
-
-        .tagline {
-            font-size: 1.25rem;
-            color: #425b76;
-            margin-bottom: 2rem;
-            font-weight: 400;
-            line-height: 1.5;
-        }
-
-        .tagline strong {
-            font-weight: 600;
-            color: #0a2540;
-        }
-
-        .google-login {
-            display: flex;
-            justify-content: center;
-        }
-
-        #login-status {
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
-            color: #425b76;
-            min-height: 20px;
-        }
-
-        @media (max-width: 480px) {
-
-            .card {
-                padding: 2rem 1.5rem;
-                border-radius: 1.5rem;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            .tagline {
-                font-size: 1.05rem;
-                margin-bottom: 1.5rem;
-            }
-        }
-    </style>
+      }
+    }
+  </style>
 </head>
-
 <body>
+  <main class="layout">
+    <section class="intro" aria-labelledby="hero-title">
+      <a class="brand" href="/" aria-label="HoldMyWork home">HoldMyWork</a>
 
-    <div class="card">
+      <h1 id="hero-title">
+        Let HoldMyWork
+        <span>handle the work.</span>
+      </h1>
 
-        <h1>HoldMyWork</h1>
+      <p class="description">
+        Build automation with simple visual icons—without needing to code.
+      </p>
 
-        <p class="tagline">
-            ....…a placeeee where you can create an
-            <strong>autopilot for your work</strong>
-        </p>
+      <ul class="benefits">
+        <li><span class="check" aria-hidden="true">✓</span>Nooo programming required</li>
+        <li><span class="check" aria-hidden="true">✓</span>Keyboard and mouse actions</li>
+        <li><span class="check" aria-hidden="true">✓</span>Simple visual workflows</li>
+        <li><span class="check" aria-hidden="true">✓</span>Easy to learn and use</li>
+      </ul>
+    </section>
 
-        <!-- Google Sign-In -->
-        <div class="google-login">
+    <section class="login-card" aria-labelledby="login-title">
+      <h2 id="login-title">Welcome to HoldMyWork</h2>
+      <p class="login-copy">
+        Sign in with Google to download the tool and explore how it works.
+      </p>
 
-            <div id="g_id_onload"
-                 data-client_id="697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com"
-                 data-callback="handleGoogleLogin">
-            </div>
-
-            <div class="g_id_signin"
-                 data-type="standard"
-                 data-size="large"
-                 data-theme="outline"
-                 data-text="signin_with"
-                 data-shape="pill">
-            </div>
-
+      <div class="google-login">
+        <div id="g_id_onload"
+             data-client_id="697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com"
+             data-callback="handleGoogleLogin"
+             data-context="signin"
+             data-ux_mode="popup">
         </div>
+        <div id="google-button"></div>
+      </div>
 
-        <!-- Login status -->
-        <div id="login-status"></div>
+      <p id="login-status" role="status" aria-live="polite"></p>
+      <p class="fine-print">
+        By continuing, you can access HoldMyWork with your Google account.
+      </p>
+    </section>
+  </main>
 
-    </div>
+  <script>
+    const googleClientId =
+      "697862826295-26p1ed6e250sb4515e4h8f2l389lfmpq.apps.googleusercontent.com";
 
+    function renderGoogleButton() {
+      if (!window.google?.accounts?.id) return;
 
-    <script>
+      const buttonContainer = document.getElementById("google-button");
+      const card = document.querySelector(".login-card");
+      const buttonWidth = Math.max(220, Math.min(568, card.clientWidth - 64));
 
-        async function handleGoogleLogin(response) {
+      buttonContainer.replaceChildren();
 
-            const status = document.getElementById("login-status");
+      google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleLogin,
+        context: "signin"
+      });
 
-            status.textContent = "Signing in...";
+      google.accounts.id.renderButton(buttonContainer, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        logo_alignment: "left",
+        width: buttonWidth
+      });
+    }
 
-            try {
+    window.addEventListener("load", renderGoogleButton);
+    window.addEventListener("resize", renderGoogleButton);
 
-                const result = await fetch(
-                    "https://api.holdmywork.com/auth/google",
-                    {
-                        method: "POST",
+    async function handleGoogleLogin(response) {
+      const status = document.getElementById("login-status");
+      status.textContent = "Signing in...";
 
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
+      try {
+        const result = await fetch("https://api.holdmywork.com/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ credential: response.credential })
+        });
 
-                        credentials: "include",
+        const data = await result.json();
 
-                        body: JSON.stringify({
-                            credential: response.credential
-                        })
-                    }
-                );
-
-                const data = await result.json();
-
-                if (!result.ok || !data.success) {
-                    throw new Error("Login failed");
-                }
-
-                status.textContent =
-                    "Welcome, " + data.name + "!";
-
-                // Redirect to dashboard
-                window.location.href = "/dashboard.html";
-
-            } catch (error) {
-
-                console.error(error);
-
-                status.textContent =
-                    "Google login failed. Please try again.";
-            }
+        if (!result.ok || !data.success) {
+          throw new Error("Login failed");
         }
 
-    </script>
-
+        status.textContent = "Welcome, " + data.name + "!";
+        window.location.href = "/dashboard.html";
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Google login failed. Please try again.";
+      }
+    }
+  </script>
 </body>
 </html>
