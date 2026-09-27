@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Razorpay Checkout -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     :root {
       --cream: #fff6e9;
@@ -211,16 +213,32 @@
       text-decoration: none;
       font-size: 19px;
       font-weight: 900;
+      cursor: pointer;
       transition: transform .18s ease, background .18s ease;
+      width: 100%;
     }
-    .download-button:hover { transform: translateY(-2px); background: #fff7eb; }
+    .download-button:hover:not(:disabled) { transform: translateY(-2px); background: #fff7eb; }
     .organization .download-button {
       border-color: var(--orange);
       background: var(--orange);
       color: #fff;
       box-shadow: 0 14px 24px rgba(255, 81, 45, .2);
     }
-    .organization .download-button:hover { background: #f24422; }
+    .organization .download-button:hover:not(:disabled) { background: #f24422; }
+    .download-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .status-message {
+      margin-top: 16px;
+      font-size: 15px;
+      text-align: center;
+      color: var(--muted);
+      min-height: 24px;
+    }
+    .status-message.error { color: #dc2626; }
+    .status-message.success { color: #16a34a; }
 
     @media (max-width: 1050px) {
       .nav { width: min(100% - 40px, 900px); }
@@ -285,6 +303,7 @@
     </div>
 
     <div class="plan-grid">
+      <!-- PERSONAL PLAN (₹49) -->
       <article class="plan">
         <p class="plan-label">Personal</p>
         <h2 class="price">₹49</h2>
@@ -296,9 +315,18 @@
           <li><span class="check" aria-hidden="true">✓</span><span>Automate repetitive tasks</span></li>
           <li><span class="check" aria-hidden="true">✓</span><span>Personal use</span></li>
         </ul>
-        <a class="download-button" href="#download">Download HMW</a>
+        <button
+          id="pay-49-button"
+          class="download-button"
+          data-amount="4900"
+          data-plan="personal"
+        >
+          💳 Pay ₹49 & Download
+        </button>
+        <div id="status-49" class="status-message"></div>
       </article>
 
+      <!-- ORGANIZATION PLAN (₹4,999) -->
       <article class="plan organization">
         <p class="plan-label">Organization</p>
         <h2 class="price">₹4,999</h2>
@@ -310,10 +338,147 @@
           <li><span class="check" aria-hidden="true">✓</span><span>Share automation workflows</span></li>
           <li><span class="check" aria-hidden="true">✓</span><span>Designed for teams and operators</span></li>
         </ul>
-        <a class="download-button" href="#download">Download HMW</a>
+        <button
+          id="pay-4999-button"
+          class="download-button"
+          data-amount="499900"
+          data-plan="organization"
+        >
+          💳 Pay ₹4,999 & Download
+        </button>
+        <div id="status-4999" class="status-message"></div>
       </article>
     </div>
   </main>
+
+  <script>
+    // ================================================
+    // CONFIG
+    // ================================================
+    const API_BASE = "https://api.holdmywork.com";
+    const RAZORPAY_KEY_ID = "rzp_test_TezJSZDm1DT6Kt"; // test key — replace with live key later
+
+    // ================================================
+    // HELPER: generic payment handler
+    // ================================================
+    function setupPayment(buttonId, statusId) {
+      const payButton = document.getElementById(buttonId);
+      const statusEl = document.getElementById(statusId);
+
+      function setStatus(message, type = "") {
+        statusEl.textContent = message;
+        statusEl.className = "status-message" + (type ? " " + type : "");
+      }
+
+      payButton.addEventListener("click", async () => {
+        const amountPaise = parseInt(payButton.dataset.amount, 10);
+        const planName = payButton.dataset.plan || "Plan";
+        const originalText = payButton.textContent;
+
+        // disable to prevent double-clicks
+        payButton.disabled = true;
+        setStatus("Creating order...");
+
+        try {
+          // -------- STEP 1: Create order on backend --------
+          const orderResponse = await fetch(`${API_BASE}/api/create-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: amountPaise,
+              currency: "INR",
+              receipt: `hmw_${planName}_${Date.now()}`
+            })
+          });
+
+          const orderData = await orderResponse.json();
+
+          if (!orderData.success) {
+            throw new Error(orderData.error || "Failed to create order");
+          }
+
+          // -------- STEP 2: Open Razorpay modal --------
+          const options = {
+            key: RAZORPAY_KEY_ID,
+            amount: orderData.amount,
+            currency: orderData.currency,
+            name: "HoldMyWork",
+            description: `${planName} plan — download access`,
+            order_id: orderData.order_id,
+
+            handler: async function (response) {
+              setStatus("Verifying payment...");
+
+              try {
+                // -------- STEP 3: Verify signature --------
+                const verifyResponse = await fetch(
+                  `${API_BASE}/api/verify-payment`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      razorpay_order_id: response.razorpay_order_id,
+                      razorpay_payment_id: response.razorpay_payment_id,
+                      razorpay_signature: response.razorpay_signature
+                    })
+                  }
+                );
+
+                const verifyData = await verifyResponse.json();
+
+                if (verifyData.success) {
+                  setStatus("✅ Payment verified! Starting download...", "success");
+
+                  // trigger the actual download
+                  const downloadUrl = `${API_BASE}/download`;
+                  const link = document.createElement("a");
+                  link.href = downloadUrl;
+                  link.download = "hmw.exe";
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+
+                  payButton.textContent = "✅ Download ready — click again";
+                  payButton.disabled = false;
+                } else {
+                  setStatus("❌ Payment verification failed. Contact support.", "error");
+                  payButton.disabled = false;
+                }
+              } catch (err) {
+                setStatus(`❌ Verification error: ${err.message}`, "error");
+                payButton.disabled = false;
+              }
+            },
+
+            modal: {
+              ondismiss: function () {
+                setStatus("Payment cancelled.");
+                payButton.disabled = false;
+              }
+            },
+
+            theme: { color: "#111111" }
+          };
+
+          const rzp = new Razorpay(options);
+
+          rzp.on("payment.failed", function (response) {
+            setStatus(`❌ Payment failed: ${response.error.description}`, "error");
+            payButton.disabled = false;
+          });
+
+          rzp.open();
+
+        } catch (err) {
+          setStatus(`❌ ${err.message}`, "error");
+          payButton.disabled = false;
+        }
+      });
+    }
+
+    // Wire up both buttons
+    setupPayment("pay-49-button", "status-49");
+    setupPayment("pay-4999-button", "status-4999");
+  </script>
 </body>
 </html>
-
