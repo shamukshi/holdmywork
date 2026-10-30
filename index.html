@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>HoldMyWork · Pattern Matcher (BB)</title>
     <!-- Plotly & XLSX -->
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js">
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-    </script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -160,7 +158,7 @@
             width: 100%;
             height: 100%;
             border-radius: 14px;
-            background: #0d131b;
+            background: #ffffff;  /* white background */
         }
         .zoom-hint {
             position: absolute;
@@ -568,7 +566,7 @@
                 return selected;
             }
 
-            // ---------- Render chart with BB overlay ----------
+            // ---------- Render chart with BB overlay (white background, smooth zoom) ----------
             function renderChart(data, bb = null, matches = null) {
                 if (!data || data.length === 0) {
                     loadStatusEl.textContent = '⚠️ no data';
@@ -652,13 +650,13 @@
 
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
-                    plot_bgcolor: 'rgba(0,0,0,0)',
-                    font: { color: '#b2c9e0', family: 'system-ui, -apple-system, sans-serif' },
+                    plot_bgcolor: '#ffffff',               // white plot background
+                    font: { color: '#1e2a3a', family: 'system-ui, -apple-system, sans-serif' }, // dark text for white bg
                     xaxis: {
-                        title: { text: 'Date', font: { color: '#b2c9e0' } },
-                        gridcolor: '#1f2b36',
-                        zerolinecolor: '#1f2b36',
-                        color: '#b2c9e0',
+                        title: { text: 'Date', font: { color: '#1e2a3a' } },
+                        gridcolor: '#e0e6ed',
+                        zerolinecolor: '#e0e6ed',
+                        color: '#1e2a3a',
                         rangeslider: { visible: false },
                         tickmode: 'array',
                         tickvals: indices.filter((_, i) => i % Math.max(1, Math.floor(data.length / 20)) === 0),
@@ -671,22 +669,22 @@
                         showspikes: true,
                         spikemode: 'across',
                         spikethickness: 1,
-                        spikecolor: '#4d6a89',
+                        spikecolor: '#8899aa',
                         tickfont: { size: 10 },
                         range: [-0.5, indices.length - 0.5]
                     },
                     yaxis: {
-                        title: { text: 'Price', font: { color: '#b2c9e0' } },
-                        gridcolor: '#1f2b36',
-                        zerolinecolor: '#1f2b36',
-                        color: '#b2c9e0',
+                        title: { text: 'Price', font: { color: '#1e2a3a' } },
+                        gridcolor: '#e0e6ed',
+                        zerolinecolor: '#e0e6ed',
+                        color: '#1e2a3a',
                         side: 'right'
                     },
                     margin: { l: 60, r: 20, t: 20, b: 80 },
                     hovermode: 'x unified',
                     showlegend: false,
                     dragmode: (activeTool === 'bb') ? 'select' : 'pan',
-                    modebar: { bgcolor: 'rgba(13,19,27,0.8)', color: '#b2c9e0', activecolor: '#6b8bb0' },
+                    modebar: { bgcolor: 'rgba(255,255,255,0.8)', color: '#1e2a3a', activecolor: '#2a6a8a' },
                     shapes: shapes,
                     annotations: matches ? matches.map((m, idx) => ({
                         x: (m.startIdx + m.endIdx) / 2,
@@ -699,9 +697,9 @@
                         })(),
                         text: `${m.similarity.toFixed(1)}%`,
                         showarrow: false,
-                        font: { color: '#66ddaa', size: 10 },
-                        bgcolor: 'rgba(13,19,27,0.7)',
-                        bordercolor: '#66ddaa',
+                        font: { color: '#1a6e4a', size: 10 },
+                        bgcolor: 'rgba(255,255,255,0.85)',
+                        bordercolor: '#1a6e4a',
                         borderwidth: 1,
                         borderpad: 2
                     })) : [],
@@ -714,7 +712,9 @@
                     modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d', 'zoomIn2d', 'zoomOut2d',
                         'resetScale2d'
                     ],
-                    displaylogo: false
+                    displaylogo: false,
+                    // enable smooth scroll zoom
+                    scrollZoom: true
                 };
 
                 Plotly.newPlot(container, [trace], layout, config);
@@ -1041,4 +1041,3 @@
     </script>
 </body>
 </html>
-
