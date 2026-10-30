@@ -4,9 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>HoldMyWork · Pattern Matcher (BB)</title>
-    <!-- Plotly & XLSX -->
+    <!-- Plotly, XLSX, JSZip & html2canvas -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -158,7 +160,7 @@
             width: 100%;
             height: 100%;
             border-radius: 14px;
-            background: #ffffff;  /* white background */
+            background: #ffffff;
         }
         .zoom-hint {
             position: absolute;
@@ -252,6 +254,40 @@
             0%, 100% { box-shadow: 0 0 5px rgba(74, 170, 106, 0.3); }
             50% { box-shadow: 0 0 20px rgba(74, 170, 106, 0.6); }
         }
+        .download-btn {
+            background: #5e3a1e;
+            border: 1px solid #9a6a3a;
+            color: #ffeedd;
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .download-btn:hover:not(:disabled) {
+            background: #8a4a2a;
+            border-color: #ba8a5a;
+            color: white;
+        }
+        .download-btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .download-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
         .bb-status {
             font-size: 0.7rem;
             color: #8ba0b8;
@@ -292,12 +328,14 @@
                 height: 14px;
             }
             .refresh-btn,
-            .find-btn {
+            .find-btn,
+            .download-btn {
                 font-size: 0.65rem;
                 padding: 3px 8px;
             }
             .refresh-btn svg,
-            .find-btn svg {
+            .find-btn svg,
+            .download-btn svg {
                 width: 14px;
                 height: 14px;
             }
@@ -360,6 +398,12 @@
             <!-- Find Trend (pattern match) -->
             <button class="find-btn" id="findTrendBtn" disabled>🔍 Find Trend</button>
 
+            <!-- Download Trends (ZIP) -->
+            <button class="download-btn" id="downloadTrendsBtn" disabled title="Download BB & matched patterns as ZIP">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Download Trends</span>
+            </button>
+
             <div class="tool-divider"></div>
 
             <!-- Reset to Home -->
@@ -407,6 +451,7 @@
             const panBtn = document.getElementById('panBtn');
             const bbBtn = document.getElementById('bbBtn');
             const findTrendBtn = document.getElementById('findTrendBtn');
+            const downloadTrendsBtn = document.getElementById('downloadTrendsBtn');
             const homeBtn = document.getElementById('homeBtn');
             const zoomInBtn = document.getElementById('zoomInBtn');
             const zoomOutBtn = document.getElementById('zoomOutBtn');
@@ -650,8 +695,8 @@
 
                 const layout = {
                     paper_bgcolor: 'rgba(0,0,0,0)',
-                    plot_bgcolor: '#ffffff',               // white plot background
-                    font: { color: '#1e2a3a', family: 'system-ui, -apple-system, sans-serif' }, // dark text for white bg
+                    plot_bgcolor: '#ffffff',
+                    font: { color: '#1e2a3a', family: 'system-ui, -apple-system, sans-serif' },
                     xaxis: {
                         title: { text: 'Date', font: { color: '#1e2a3a' } },
                         gridcolor: '#e0e6ed',
@@ -713,7 +758,6 @@
                         'resetScale2d'
                     ],
                     displaylogo: false,
-                    // enable smooth scroll zoom
                     scrollZoom: true
                 };
 
@@ -752,6 +796,7 @@
                     bbStatus.className = 'bb-status';
                     findTrendBtn.disabled = true;
                     findTrendBtn.title = 'Draw a BB first';
+                    downloadTrendsBtn.disabled = true;
                     if (activeTool === 'bb') {
                         zoomHint.textContent = '✧ Drag a rectangle over candles to define BB';
                         zoomHint.className = 'zoom-hint show';
@@ -790,6 +835,7 @@
                         bbSelection = null;
                         matchResults = null;
                         findTrendBtn.disabled = true;
+                        downloadTrendsBtn.disabled = true;
                         bbStatus.textContent = '⏹ No BB';
                         bbStatus.className = 'bb-status';
                         renderChart(ohlcData, null, null);
@@ -832,6 +878,7 @@
                 matchResults = null;
                 findTrendBtn.disabled = false;
                 findTrendBtn.title = 'Click to find patterns ≥80% similar';
+                downloadTrendsBtn.disabled = true;
 
                 // Re-render with BB
                 renderChart(ohlcData, bbSelection, null);
@@ -885,12 +932,156 @@
                 bbStatus.className = 'bb-status done';
                 findTrendBtn.disabled = false;
                 findTrendBtn.title = `${matches.length} matches found!`;
+                downloadTrendsBtn.disabled = false;
+                downloadTrendsBtn.title = `Download BB & ${matches.length} matched patterns as ZIP`;
                 zoomHint.textContent = `🎯 Found ${matches.length} patterns with ≥80% similarity!`;
                 zoomHint.className = 'zoom-hint show success';
 
                 console.log(`Found ${matches.length} matches:`);
                 for (const m of matches) {
                     console.log(`  Match ${m.startIdx}-${m.endIdx}  similarity: ${m.similarity.toFixed(1)}%`);
+                }
+            }
+
+            // ---------- Download Trends as ZIP ----------
+            async function downloadTrends() {
+                if (!bbSelection || !matchResults || matchResults.length === 0) {
+                    alert('No BB or matches to download. Please find trends first.');
+                    return;
+                }
+
+                const btn = downloadTrendsBtn;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<svg viewBox="0 0 24 24" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4" stroke-width="2" fill="none"/></svg><span>Zipping…</span>';
+                btn.disabled = true;
+
+                const zip = new JSZip();
+                const wrapper = document.getElementById('chartWrapper');
+
+                // Helper to capture a cropped region of the chart using html2canvas
+                async function captureChartRegion(pixelBounds) {
+                    const canvas = await html2canvas(wrapper, {
+                        backgroundColor: '#ffffff',
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        width: wrapper.clientWidth,
+                        height: wrapper.clientHeight
+                    });
+                    // pixelBounds: {left, top, width, height} in wrapper CSS pixels
+                    const scaleFactor = canvas.width / wrapper.clientWidth;
+                    const cropped = document.createElement('canvas');
+                    cropped.width = Math.max(1, Math.round(pixelBounds.width * scaleFactor));
+                    cropped.height = Math.max(1, Math.round(pixelBounds.height * scaleFactor));
+                    const ctx = cropped.getContext('2d');
+                    ctx.drawImage(
+                        canvas,
+                        Math.round(pixelBounds.left * scaleFactor),
+                        Math.round(pixelBounds.top * scaleFactor),
+                        Math.round(pixelBounds.width * scaleFactor),
+                        Math.round(pixelBounds.height * scaleFactor),
+                        0, 0,
+                        cropped.width, cropped.height
+                    );
+                    return cropped;
+                }
+
+                // Convert chart data coords (x index, y price) to wrapper pixel coords
+                function dataToPixels(xData, yData) {
+                    const layout = container.layout;
+                    const gd = container;
+                    const xaxis = layout.xaxis;
+                    const yaxis = layout.yaxis;
+                    const xRange = xaxis.range;
+                    const yRange = yaxis.range;
+                    const plotWidth = gd._fullLayout.xaxis._length;
+                    const plotHeight = gd._fullLayout.yaxis._length;
+                    // Pixel offset within the plot area (relative to container top-left)
+                    const xPixRel = ((xData - xRange[0]) / (xRange[1] - xRange[0])) * plotWidth;
+                    const yPixRel = plotHeight - ((yData - yRange[0]) / (yRange[1] - yRange[0])) * plotHeight;
+                    // Container position inside wrapper
+                    const containerRect = container.getBoundingClientRect();
+                    const wrapperRect = wrapper.getBoundingClientRect();
+                    const containerOffsetLeft = containerRect.left - wrapperRect.left;
+                    const containerOffsetTop = containerRect.top - wrapperRect.top;
+                    // Plot area offset inside container (from Plotly internals)
+                    const plotOffsetLeft = gd._fullLayout.xaxis.l + gd._fullLayout.margin.l * 0; // l is already absolute? use _offset
+                    // Plotly provides _offset for the plot area:
+                    const xOffset = gd._fullLayout.xaxis._offset;
+                    const yOffset = gd._fullLayout.yaxis._offset;
+                    return {
+                        x: containerOffsetLeft + xOffset + xPixRel,
+                        y: containerOffsetTop + yOffset + yPixRel
+                    };
+                }
+
+                // Compute pixel bounding box for a data rectangle
+                function dataRectToPixelBounds(x0, x1, y0, y1) {
+                    const p1 = dataToPixels(x0, y1); // top-left in screen coords (y1 is higher price -> smaller pixel y)
+                    const p2 = dataToPixels(x1, y0); // bottom-right
+                    const left = Math.min(p1.x, p2.x);
+                    const top = Math.min(p1.y, p2.y);
+                    const right = Math.max(p1.x, p2.x);
+                    const bottom = Math.max(p1.y, p2.y);
+                    const pad = 8; // small padding in pixels
+                    return {
+                        left: Math.max(0, left - pad),
+                        top: Math.max(0, top - pad),
+                        width: Math.min(wrapper.clientWidth - left + pad, right - left + pad * 2),
+                        height: Math.min(wrapper.clientHeight - top + pad, bottom - top + pad * 2)
+                    };
+                }
+
+                try {
+                    // 1) Capture BB box region
+                    const bbBounds = dataRectToPixelBounds(
+                        bbSelection.x0, bbSelection.x1, bbSelection.y0, bbSelection.y1
+                    );
+                    const bbCanvas = await captureChartRegion(bbBounds);
+                    const bbDataUrl = bbCanvas.toDataURL('image/png');
+                    zip.file('BB_selection.png', bbDataUrl.split(',')[1], { base64: true });
+
+                    // 2) Capture each match region, named by similarity percentage
+                    for (let i = 0; i < matchResults.length; i++) {
+                        const m = matchResults[i];
+                        const idxStart = m.startIdx;
+                        const idxEnd = m.endIdx;
+                        // Price bounds from candles
+                        let yMin = Infinity, yMax = -Infinity;
+                        for (let k = idxStart; k <= idxEnd; k++) {
+                            const d = ohlcData[k];
+                            if (d.low < yMin) yMin = d.low;
+                            if (d.high > yMax) yMax = d.high;
+                        }
+                        const yPad = (yMax - yMin) * 0.05 || 0.001;
+                        const bounds = dataRectToPixelBounds(
+                            idxStart - 0.6, idxEnd + 0.6, yMin - yPad, yMax + yPad
+                        );
+                        const canvas = await captureChartRegion(bounds);
+                        const dataUrl = canvas.toDataURL('image/png');
+                        // Name: e.g., "92.5%.png" — make safe by replacing characters if needed
+                        const safeName = m.similarity.toFixed(1).replace(/[^0-9.]/g, '') + '%';
+                        zip.file(`${safeName}.png`, dataUrl.split(',')[1], { base64: true });
+                    }
+
+                    const blob = await zip.generateAsync({ type: 'blob' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `trend_matches_${new Date().toISOString().slice(0,10)}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+                    zoomHint.textContent = `📦 ZIP downloaded with BB + ${matchResults.length} trend images!`;
+                    zoomHint.className = 'zoom-hint show success';
+                } catch (err) {
+                    console.error('Download error:', err);
+                    alert('Error generating ZIP: ' + err.message);
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
                 }
             }
 
@@ -973,6 +1164,7 @@
                 bbSelection = null;
                 matchResults = null;
                 findTrendBtn.disabled = true;
+                downloadTrendsBtn.disabled = true;
                 bbStatus.textContent = '⏹ No BB';
                 bbStatus.className = 'bb-status';
                 loadExcel().then(data => {
@@ -1006,6 +1198,7 @@
                     }
                 });
                 findTrendBtn.addEventListener('click', findTrend);
+                downloadTrendsBtn.addEventListener('click', downloadTrends);
 
                 homeBtn.addEventListener('click', resetHome);
                 zoomInBtn.addEventListener('click', zoomIn);
@@ -1014,13 +1207,11 @@
 
                 container.addEventListener('dblclick', resetHome);
 
-                // Selection handler for BB - using both plotly_selected and plotly_selecting
+                // Selection handler for BB
                 container.on('plotly_selected', handleSelection);
-
-                // Also handle plotly_selecting for real-time feedback
                 container.on('plotly_selecting', function(eventData) {
                     if (activeTool === 'bb' && eventData && eventData.range) {
-                        // Just show that selection is happening
+                        // Real-time feedback placeholder
                     }
                 });
 
@@ -1039,5 +1230,10 @@
             init();
         })();
     </script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </body>
 </html>
