@@ -113,7 +113,7 @@
             <small>⚡</small>
         </div>
         <div class="sub-message">
-            tt care of my work while I go do something else.
+            take care of my work while I go do something else.
         </div>
     </header>
 
@@ -187,45 +187,6 @@
             let activeTool = 'pan';
             let bbSelection = null;
             let matchResults = null;
-
-            // ---------- Smooth interpolation helper (Catmull-Rom / monotone-ish) ----------
-            // Generates a smoothed close-price polyline so the chart reads as a flowing curve.
-            function smoothCloseLine(data, pointsPerSegment = 6) {
-                if (!data || data.length < 3) return null;
-                const xs = data.map((_, i) => i);
-                const ys = data.map(d => d.close);
-
-                // Catmull-Rom spline through (x, y)
-                const outX = [];
-                const outY = [];
-                const n = ys.length;
-
-                function catmull(p0, p1, p2, p3, t) {
-                    const t2 = t * t;
-                    const t3 = t2 * t;
-                    return 0.5 * ((2 * p1) +
-                        (-p0 + p2) * t +
-                        (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
-                        (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
-                }
-
-                for (let i = 0; i < n - 1; i++) {
-                    const p0 = ys[Math.max(0, i - 1)];
-                    const p1 = ys[i];
-                    const p2 = ys[i + 1];
-                    const p3 = ys[Math.min(n - 1, i + 2)];
-                    for (let s = 0; s < pointsPerSegment; s++) {
-                        const t = s / pointsPerSegment;
-                        outX.push(xs[i] + t);
-                        outY.push(catmull(p0, p1, p2, p3, t));
-                    }
-                }
-                // close the last point
-                outX.push(xs[n - 1]);
-                outY.push(ys[n - 1]);
-
-                return { x: outX, y: outY };
-            }
 
             // ---------- column detection ----------
             function findColumns(headers) {
@@ -354,7 +315,7 @@
                 return selected;
             }
 
-            // ---------- Render chart with smoothed overlays ----------
+            // ---------- Render chart ----------
             function renderChart(data, bb = null, matches = null) {
                 if (!data || data.length === 0) {
                     loadStatusEl.textContent = '⚠️ no data';
@@ -384,27 +345,6 @@
                     text: hoverTexts,
                     hovertemplate: '<b>%{text}</b><br>Open: %{open:.4f}<br>High: %{high:.4f}<br>Low: %{low:.4f}<br>Close: %{close:.4f}<extra></extra>'
                 });
-
-                // ---- Smoothed close-price curve overlay (the "smoothing" visual) ----
-                const smooth = smoothCloseLine(data, 8);
-                if (smooth) {
-                    traces.push({
-                        type: 'scatter',
-                        mode: 'lines',
-                        x: smooth.x,
-                        y: smooth.y,
-                        name: 'Close (smoothed)',
-                        line: {
-                            color: 'rgba(42, 106, 138, 0.55)',
-                            width: 2,
-                            shape: 'spline',
-                            smoothing: 1.3,
-                            simplify: false
-                        },
-                        hoverinfo: 'skip',
-                        showlegend: false
-                    });
-                }
 
                 const shapes = [];
 
